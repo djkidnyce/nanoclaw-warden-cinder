@@ -6,6 +6,8 @@ Pinned versions as of 2026-11-22: KEDA 2.21.1, Cilium 1.20.5, Calico 3.33.1, Red
 
 ![Deployment overview](infographic.svg)
 
+For a one page view of everything below, see the [mind map](mindmap.svg).
+
 ## The short version
 
 You drop a task on a Redis stream. A controller wakes up, splits the task into subtasks, and writes one small message per subtask. KEDA sees the backlog and starts one Kubernetes Job per subtask, up to a cap. Each Job runs one agent that does exactly one subtask, writes its result, and exits. A vault gateway wakes up with the first agent, holds the only copy of the model API key, and is the only pod allowed to leave the cluster. When the work is done, the controller, the vault and the agents all scale back to zero. Redis is the one thing that stays up.

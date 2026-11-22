@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="928" viewBox="0 0 1500 928" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title>How NanoClaw Warden Cinder works</title>
+<desc>Mind map. Center: NanoClaw Warden Cinder. Branches: how a task flows, scale to zero, proof, security, recovery and stack.</desc>
+<rect width="1500" height="928" fill="#FFFFFF"/>
+<text x="40" y="44" font-size="22" font-weight="600" fill="#1F1E1C">How it works</text>
+<text x="40" y="68" font-size="13" fill="#5F5E5A">Agents spark when there is work and burn out clean. Everything but Redis scales to zero.</text>
+<path d="M794.0 391.7 C837.0 391.7 837.0 225.0 880.0 225.0" stroke="#0F6E56" stroke-width="3" fill="none" opacity="0.85"/>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 111.0 1100 111.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="96.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="115.5" font-size="13" fill="#2C2C2A">1  A task lands on the Redis tasks stream</text>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 149.0 1100 149.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="134.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="153.5" font-size="13" fill="#2C2C2A">2  Controller wakes and splits it into subtasks</text>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 187.0 1100 187.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="172.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="191.5" font-size="13" fill="#2C2C2A">3  KEDA sees the backlog as stream lag</text>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 225.0 1100 225.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="210.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="229.5" font-size="13" fill="#2C2C2A">4  One agent Job starts per waiting subtask</text>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 263.0 1100 263.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="248.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="267.5" font-size="13" fill="#2C2C2A">5  Agent calls the model through the vault</text>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 301.0 1100 301.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="286.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="305.5" font-size="13" fill="#2C2C2A">6  Result comes back, actions wait for a human</text>
+<path d="M1030.0 225.0 C1070.0 225.0 1060 339.0 1100 339.0" stroke="#0F6E56" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="324.0" width="360" height="30" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.8"/>
+<text x="1114" y="343.5" font-size="13" fill="#2C2C2A">7  Everything drains back to zero</text>
+<rect x="880.0" y="206.0" width="150" height="38" rx="19" fill="#0F6E56"/>
+<text x="955.0" y="230.0" font-size="14.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">How a task flows</text>
+<path d="M844.8 492.3 C862.4 492.3 862.4 498.0 880.0 498.0" stroke="#854F0B" stroke-width="3" fill="none" opacity="0.85"/>
+<path d="M1030.0 498.0 C1070.0 498.0 1060 403.0 1100 403.0" stroke="#854F0B" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="388.0" width="360" height="30" rx="8" fill="#FDF0DC" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1114" y="407.5" font-size="13" fill="#2C2C2A">Redis is the only pod always on</text>
+<path d="M1030.0 498.0 C1070.0 498.0 1060 441.0 1100 441.0" stroke="#854F0B" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="426.0" width="360" height="30" rx="8" fill="#FDF0DC" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1114" y="445.5" font-size="13" fill="#2C2C2A">Controller 0 to 1, cooldown 120 s</text>
+<path d="M1030.0 498.0 C1070.0 498.0 1060 479.0 1100 479.0" stroke="#854F0B" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="464.0" width="360" height="30" rx="8" fill="#FDF0DC" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1114" y="483.5" font-size="13" fill="#2C2C2A">Agents 0 to 20, one Job per subtask</text>
+<path d="M1030.0 498.0 C1070.0 498.0 1060 517.0 1100 517.0" stroke="#854F0B" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="502.0" width="360" height="30" rx="8" fill="#FDF0DC" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1114" y="521.5" font-size="13" fill="#2C2C2A">Vault 0 to 3, one per 8 agents, cooldown 60 s</text>
+<path d="M1030.0 498.0 C1070.0 498.0 1060 555.0 1100 555.0" stroke="#854F0B" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="540.0" width="360" height="30" rx="8" fill="#FDF0DC" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1114" y="559.5" font-size="13" fill="#2C2C2A">KEDA lagCount with the accurate strategy</text>
+<path d="M1030.0 498.0 C1070.0 498.0 1060 593.0 1100 593.0" stroke="#854F0B" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="578.0" width="360" height="30" rx="8" fill="#FDF0DC" stroke="#854F0B" stroke-width="0.8"/>
+<text x="1114" y="597.5" font-size="13" fill="#2C2C2A">Recovery sweep window every 10 minutes</text>
+<rect x="880.0" y="479.0" width="150" height="38" rx="19" fill="#854F0B"/>
+<text x="955.0" y="503.0" font-size="14.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Scale to zero</text>
+<path d="M793.5 562.6 C836.7 562.6 836.7 733.0 880.0 733.0" stroke="#6B3FA0" stroke-width="3" fill="none" opacity="0.85"/>
+<path d="M1030.0 733.0 C1070.0 733.0 1060 657.0 1100 657.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="642.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
+<text x="1114" y="661.5" font-size="13" fill="#2C2C2A">223 tests, all green</text>
+<path d="M1030.0 733.0 C1070.0 733.0 1060 695.0 1100 695.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="680.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
+<text x="1114" y="699.5" font-size="13" fill="#2C2C2A">Real Redis 8.12 and a Kubernetes 1.37 API server</text>
+<path d="M1030.0 733.0 C1070.0 733.0 1060 733.0 1100 733.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="718.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
+<text x="1114" y="737.5" font-size="13" fill="#2C2C2A">Scale emulation with real agent processes</text>
+<path d="M1030.0 733.0 C1070.0 733.0 1060 771.0 1100 771.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="756.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
+<text x="1114" y="775.5" font-size="13" fill="#2C2C2A">kind cluster run in CI</text>
+<path d="M1030.0 733.0 C1070.0 733.0 1060 809.0 1100 809.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="1100" y="794.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
+<text x="1114" y="813.5" font-size="13" fill="#2C2C2A">shellcheck, kubeconform, kube-linter, checkov</text>
+<rect x="880.0" y="714.0" width="150" height="38" rx="19" fill="#6B3FA0"/>
+<text x="955.0" y="738.0" font-size="14.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Proof</text>
+<path d="M700.2 395.0 C660.1 395.0 660.1 263.0 620.0 263.0" stroke="#185FA5" stroke-width="3" fill="none" opacity="0.85"/>
+<path d="M470.0 263.0 C430.0 263.0 440 111.0 400 111.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="96.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="115.5" font-size="13" fill="#2C2C2A">No API tokens or Roles for any workload</text>
+<path d="M470.0 263.0 C430.0 263.0 440 149.0 400 149.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="134.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="153.5" font-size="13" fill="#2C2C2A">Redis user per workload, default user off</text>
+<path d="M470.0 263.0 C430.0 263.0 440 187.0 400 187.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="172.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="191.5" font-size="13" fill="#2C2C2A">Default deny network, seven allowed flows</text>
+<path d="M470.0 263.0 C430.0 263.0 440 225.0 400 225.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="210.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="229.5" font-size="13" fill="#2C2C2A">Only the vault leaves the cluster</text>
+<path d="M470.0 263.0 C430.0 263.0 440 263.0 400 263.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="248.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="267.5" font-size="13" fill="#2C2C2A">Only KEDA may create Jobs</text>
+<path d="M470.0 263.0 C430.0 263.0 440 301.0 400 301.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="286.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="305.5" font-size="13" fill="#2C2C2A">Approved images only, no debug containers</text>
+<path d="M470.0 263.0 C430.0 263.0 440 339.0 400 339.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="324.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="343.5" font-size="13" fill="#2C2C2A">API key mounted in one pod</text>
+<path d="M470.0 263.0 C430.0 263.0 440 377.0 400 377.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="362.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="381.5" font-size="13" fill="#2C2C2A">Token per subtask, seen only by its agent</text>
+<path d="M470.0 263.0 C430.0 263.0 440 415.0 400 415.0" stroke="#185FA5" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="400.0" width="360" height="30" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="54" y="419.5" font-size="13" fill="#2C2C2A">Tool use becomes a proposal, never an action</text>
+<rect x="470.0" y="244.0" width="150" height="38" rx="19" fill="#185FA5"/>
+<text x="545.0" y="268.0" font-size="14.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Security</text>
+<path d="M662.6 516.7 C641.3 516.7 641.3 536.0 620.0 536.0" stroke="#A32D2D" stroke-width="3" fill="none" opacity="0.85"/>
+<path d="M470.0 536.0 C430.0 536.0 440 479.0 400 479.0" stroke="#A32D2D" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="464.0" width="360" height="30" rx="8" fill="#FBEAEA" stroke="#A32D2D" stroke-width="0.8"/>
+<text x="54" y="483.5" font-size="13" fill="#2C2C2A">Retry pod resumes its own message</text>
+<path d="M470.0 536.0 C430.0 536.0 440 517.0 400 517.0" stroke="#A32D2D" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="502.0" width="360" height="30" rx="8" fill="#FBEAEA" stroke="#A32D2D" stroke-width="0.8"/>
+<text x="54" y="521.5" font-size="13" fill="#2C2C2A">Sweep requeues stranded work</text>
+<path d="M470.0 536.0 C430.0 536.0 440 555.0 400 555.0" stroke="#A32D2D" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="540.0" width="360" height="30" rx="8" fill="#FBEAEA" stroke="#A32D2D" stroke-width="0.8"/>
+<text x="54" y="559.5" font-size="13" fill="#2C2C2A">Dead letter queue after 3 attempts</text>
+<path d="M470.0 536.0 C430.0 536.0 440 593.0 400 593.0" stroke="#A32D2D" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="578.0" width="360" height="30" rx="8" fill="#FBEAEA" stroke="#A32D2D" stroke-width="0.8"/>
+<text x="54" y="597.5" font-size="13" fill="#2C2C2A">Survives Redis restarting empty</text>
+<rect x="470.0" y="517.0" width="150" height="38" rx="19" fill="#A32D2D"/>
+<text x="545.0" y="541.0" font-size="14.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Recovery</text>
+<path d="M703.8 561.2 C661.9 561.2 661.9 714.0 620.0 714.0" stroke="#5F5E5A" stroke-width="3" fill="none" opacity="0.85"/>
+<path d="M470.0 714.0 C430.0 714.0 440 657.0 400 657.0" stroke="#5F5E5A" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="642.0" width="360" height="30" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
+<text x="54" y="661.5" font-size="13" fill="#2C2C2A">KEDA 2.21.1</text>
+<path d="M470.0 714.0 C430.0 714.0 440 695.0 400 695.0" stroke="#5F5E5A" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="680.0" width="360" height="30" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
+<text x="54" y="699.5" font-size="13" fill="#2C2C2A">Cilium 1.20.5 or Calico 3.33.1</text>
+<path d="M470.0 714.0 C430.0 714.0 440 733.0 400 733.0" stroke="#5F5E5A" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="718.0" width="360" height="30" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
+<text x="54" y="737.5" font-size="13" fill="#2C2C2A">Redis 8.12.0, Python 3.13.18</text>
+<path d="M470.0 714.0 C430.0 714.0 440 771.0 400 771.0" stroke="#5F5E5A" stroke-width="1.4" fill="none" opacity="0.6"/>
+<rect x="40" y="756.0" width="360" height="30" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
+<text x="54" y="775.5" font-size="13" fill="#2C2C2A">Kubernetes 1.32 or newer</text>
+<rect x="470.0" y="695.0" width="150" height="38" rx="19" fill="#5F5E5A"/>
+<text x="545.0" y="719.0" font-size="14.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Stack</text>
+<circle cx="750.0" cy="477.0" r="96" fill="#1F1E1C"/>
+<text x="750.0" y="463.0" font-size="19" font-weight="700" fill="#FFFFFF" text-anchor="middle">NanoClaw</text>
+<text x="750.0" y="487.0" font-size="19" font-weight="700" fill="#FFFFFF" text-anchor="middle">Warden Cinder</text>
+<text x="750.0" y="511.0" font-size="11.5" fill="#C9C7BE" text-anchor="middle">agents on Kubernetes</text>
+<text x="40" y="904" font-size="11.5" fill="#8A887F">Versions pinned 2026-11-22. Full write up: docs/HOW_IT_WORKS.md</text>
+</svg>

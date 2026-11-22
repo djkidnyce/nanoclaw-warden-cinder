@@ -34,7 +34,7 @@ A rebuild after a full review. The first version looked right on paper but would
 ### Changed
 - KEDA 2.21.1 (minimum 2.21.0 for CVE-2026-77524), Cilium 1.20.5, Calico 3.33.1, Redis 8.12.0, Python 3.13.18.
 - Every GitHub Action pinned to a commit SHA, harden-runner on every job, Renovate for updates, cosign signing on release.
-- Default model `claude-sonnet-5-5`, set by config instead of code.
+- Default model is set by config instead of code.
 - No workload has any Kubernetes API permission. The controller no longer needs one.
 
 ## 0.1.0 (2026-06-22)

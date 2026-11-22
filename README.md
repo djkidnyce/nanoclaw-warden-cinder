@@ -23,6 +23,67 @@ You put a task on a queue. A controller splits it into subtasks. KEDA starts one
 | Agents | 0 | 1 per waiting subtask, up to 20 |
 | Vault | 0 | 1 per 8 agents, up to 3 |
 
+## How it works at a glance
+
+![Mind map of how NanoClaw Warden Cinder works](docs/mindmap.svg)
+
+<details>
+<summary>Same map as a native GitHub Mermaid diagram</summary>
+
+```mermaid
+mindmap
+  root((NanoClaw Warden Cinder))
+    How a task flows
+      1 Task lands on a Redis stream
+      2 Controller splits it into subtasks
+      3 KEDA reads stream lag
+      4 One agent Job per subtask
+      5 Agent calls the model through the vault
+      6 Result back, actions wait for a human
+      7 Everything drains back to zero
+    Scale to zero
+      Redis always on
+      Controller 0 to 1
+      Agents 0 to 20
+      Vault 0 to 3
+      KEDA lagCount, accurate strategy
+      Recovery sweep every 10 minutes
+    Security
+      Identity
+        No API tokens or Roles anywhere
+        Redis user per workload
+      Network
+        Default deny
+        Only the vault leaves the cluster
+        Cilium by hostname or Calico by CIDR
+      Admission
+        Only KEDA creates Jobs
+        Approved images only
+        No debug containers
+      Credentials
+        API key in one pod
+        Token per subtask, claimer only
+      Agents never act
+        Tool use becomes a proposal
+    Recovery
+      Retry pod resumes its own message
+      Sweep requeues stranded work
+      Dead letter after 3 tries
+      Survives Redis data loss
+    Proof
+      223 tests
+      Real Redis 8.12 and Kubernetes 1.37 API server
+      kind cluster run in CI
+      kubeconform, kube-linter, checkov
+    Stack
+      KEDA 2.21.1
+      Cilium 1.20.5 or Calico 3.33.1
+      Redis 8.12.0
+      Kubernetes 1.32 or newer
+```
+
+</details>
+
 ## Why it's built this way
 
 Prompt injection is the top risk on the OWASP list for LLM apps, and nobody has a reliable fix. So this design doesn't depend on the model behaving. If an agent is fully hijacked:
