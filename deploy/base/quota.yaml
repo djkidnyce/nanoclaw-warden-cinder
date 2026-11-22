@@ -1,0 +1,33 @@
+# Hard ceiling on what the namespace can consume, independent of KEDA settings.
+# A runaway scaler or a flood of tasks stops here.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: nanoclaw-quota
+spec:
+  hard:
+    pods: "40"
+    count/jobs.batch: "120"
+    requests.cpu: "12"
+    requests.memory: 24Gi
+    limits.cpu: "30"
+    limits.memory: 48Gi
+    services.loadbalancers: "0"
+    services.nodeports: "0"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: nanoclaw-defaults
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "2"
+        memory: 2Gi

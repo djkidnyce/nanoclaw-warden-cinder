@@ -1,0 +1,16 @@
+[project]
+name = "nanoclaw-warden-cinder"
+version = "0.2.0"
+description = "Ephemeral, isolated AI agents on Kubernetes that scale to zero."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = ["redis==8.1.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+  "apiserver: needs kube-apiserver and etcd binaries (envtest)",
+  "e2e: scale emulation with real processes",
+]

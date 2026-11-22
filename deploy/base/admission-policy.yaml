@@ -1,0 +1,109 @@
+# Admission guardrails, enforced by the API server itself (no webhook to run or patch).
+# Parameters live in the nanoclaw-admission ConfigMap (admission.env).
+#
+# 1. Only the KEDA operator may create Jobs in the namespace, and only Jobs whose pods
+#    run as the powerless agent identity without an API token.
+# 2. Every pod must use an approved image (optionally digest pinned) and one of the
+#    four nanoclaw identities.
+# 3. Ephemeral debug containers are refused. Break glass by deleting the binding.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: nanoclaw-job-guard
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["jobs"]
+  variables:
+    - name: creators
+      expression: "params.data.jobCreators.split(',')"
+    - name: pod
+      expression: "object.spec.template.spec"
+  validations:
+    - expression: "request.userInfo.username in variables.creators"
+      messageExpression: "'Jobs in this namespace may only be created by ' + params.data.jobCreators + ', not ' + request.userInfo.username"
+      reason: Forbidden
+    - expression: "has(variables.pod.serviceAccountName) && variables.pod.serviceAccountName == 'nanoclaw-agent'"
+      message: "agent Jobs must run as the nanoclaw-agent service account"
+    - expression: "has(variables.pod.automountServiceAccountToken) && variables.pod.automountServiceAccountToken == false"
+      message: "agent Jobs must not mount a service account token"
+    - expression: "has(object.spec.activeDeadlineSeconds) && object.spec.activeDeadlineSeconds <= 3600"
+      message: "agent Jobs need activeDeadlineSeconds of at most 3600"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: nanoclaw-job-guard
+spec:
+  policyName: nanoclaw-job-guard
+  validationActions: [Deny, Audit]
+  paramRef:
+    name: nanoclaw-admission
+    namespace: nanoclaw
+    parameterNotFoundAction: Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: nanoclaw
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: nanoclaw-pod-guard
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["pods/ephemeralcontainers"]
+  variables:
+    - name: prefixes
+      expression: "params.data.allowedImagePrefixes.split(',')"
+    - name: containers
+      expression: "object.spec.containers + (has(object.spec.initContainers) ? object.spec.initContainers : [])"
+    - name: identities
+      expression: "['nanoclaw-agent', 'nanoclaw-controller', 'nanoclaw-vault', 'nanoclaw-redis']"
+  validations:
+    - expression: "!has(request.subResource) || request.subResource != 'ephemeralcontainers'"
+      message: "ephemeral debug containers are not allowed in this namespace"
+      reason: Forbidden
+    - expression: "variables.containers.all(c, variables.prefixes.exists(p, c.image.startsWith(p + ':') || c.image.startsWith(p + '@')))"
+      messageExpression: "'image not on the allow list: ' + variables.containers.map(c, c.image).join(', ')"
+    - expression: "params.data.requireDigest != 'true' || variables.containers.all(c, c.image.contains('@sha256:'))"
+      message: "images must be pinned by digest"
+    - expression: "has(object.spec.serviceAccountName) && object.spec.serviceAccountName in variables.identities"
+      message: "pods must run as one of the nanoclaw service accounts"
+    - expression: "has(object.spec.automountServiceAccountToken) && object.spec.automountServiceAccountToken == false"
+      message: "pods in this namespace must not mount a service account token"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: nanoclaw-pod-guard
+spec:
+  policyName: nanoclaw-pod-guard
+  validationActions: [Deny, Audit]
+  paramRef:
+    name: nanoclaw-admission
+    namespace: nanoclaw
+    parameterNotFoundAction: Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: nanoclaw

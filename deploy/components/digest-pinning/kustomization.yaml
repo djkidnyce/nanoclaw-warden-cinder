@@ -1,0 +1,12 @@
+# Makes the admission policy refuse any image that is not pinned by digest.
+# Run scripts/pin-digests.sh first so every image in the build carries one.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+configMapGenerator:
+  - name: nanoclaw-admission
+    behavior: merge
+    literals:
+      - requireDigest=true
+    options:
+      disableNameSuffixHash: true

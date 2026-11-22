@@ -1,0 +1,14 @@
+# checkov -d . --config-file .checkov.yaml runs against rendered overlays in CI.
+framework:
+  - kubernetes
+compact: true
+quiet: true
+# Offline: no calls to the vendor platform for guideline metadata.
+skip-download: true
+skip-check:
+  # Image digests: enforced by deploy/components/digest-pinning plus scripts/pin-digests.sh
+  # once the runtime image is published. Left opt in so a fresh clone can deploy.
+  - CKV_K8S_43
+  # Pull policy Always: with digest pinning the node cache cannot drift, and Always would add a
+  # registry round trip to every scale from zero.
+  - CKV_K8S_15

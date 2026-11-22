@@ -1,0 +1,84 @@
+# KEDA reads Redis as the "keda" user, which can only read stream metadata.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: nanoclaw-redis-keda
+spec:
+  secretTargetRef:
+    - parameter: username
+      name: nanoclaw-redis-keda
+      key: username
+    - parameter: password
+      name: nanoclaw-redis-keda
+      key: password
+---
+# Controller: zero or one replica. Wakes for inbound tasks, for results to collect,
+# and for a short sweep window every ten minutes that recovers stranded work.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: nanoclaw-controller
+  labels:
+    app.kubernetes.io/component: controller
+spec:
+  scaleTargetRef:
+    name: controller
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  pollingInterval: 5
+  cooldownPeriod: 120
+  triggers:
+    - type: redis-streams
+      authenticationRef:
+        name: nanoclaw-redis-keda
+      metadata:
+        address: redis.nanoclaw.svc.cluster.local:6379
+        stream: "nanoclaw:tasks"
+        consumerGroup: controller
+        lagCount: "1"
+        activationLagCount: "0"
+    - type: redis-streams
+      authenticationRef:
+        name: nanoclaw-redis-keda
+      metadata:
+        address: redis.nanoclaw.svc.cluster.local:6379
+        stream: "nanoclaw:results"
+        consumerGroup: controller
+        lagCount: "1"
+        activationLagCount: "0"
+    - type: cron
+      metadata:
+        timezone: Etc/UTC
+        start: "*/10 * * * *"
+        end: "3-59/10 * * * *"
+        desiredReplicas: "1"
+---
+# Vault: up while any agent pod exists or work is waiting, zero otherwise.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: nanoclaw-vault
+  labels:
+    app.kubernetes.io/component: vault
+spec:
+  scaleTargetRef:
+    name: vault
+  minReplicaCount: 0
+  maxReplicaCount: 3
+  pollingInterval: 5
+  cooldownPeriod: 60
+  triggers:
+    - type: kubernetes-workload
+      metadata:
+        podSelector: "app.kubernetes.io/component=agent"
+        value: "8"
+        activationValue: "0"
+    - type: redis-streams
+      authenticationRef:
+        name: nanoclaw-redis-keda
+      metadata:
+        address: redis.nanoclaw.svc.cluster.local:6379
+        stream: "nanoclaw:subtasks"
+        consumerGroup: agents
+        lagCount: "20"
+        activationLagCount: "0"

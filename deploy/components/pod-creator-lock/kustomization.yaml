@@ -1,0 +1,22 @@
+# Only Kubernetes' own Job and ReplicaSet controllers may create pods in the namespace.
+# Stops anyone with pod create rights there from launching a pod that mounts an agent
+# or vault password and impersonates that workload. Also blocks `kubectl run` and
+# `kubectl debug` for people, on purpose.
+#
+# The identities below are what kube-controller-manager uses with
+# --use-service-account-credentials (the kubeadm and most managed defaults), plus its
+# single shared identity when that flag is off. Check yours before enabling:
+#   kubectl get events -n nanoclaw -o wide   (after a Job runs) or your audit log.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - policy.yaml
+
+configMapGenerator:
+  - name: nanoclaw-admission
+    behavior: merge
+    literals:
+      - podCreators=system:serviceaccount:kube-system:job-controller,system:serviceaccount:kube-system:replicaset-controller,system:kube-controller-manager
+    options:
+      disableNameSuffixHash: true

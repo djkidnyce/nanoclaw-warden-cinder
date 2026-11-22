@@ -1,0 +1,54 @@
+# Base: everything except the vault's path to the internet, which depends on the CNI.
+# Deploy an overlay, not the base:
+#   kubectl apply -k deploy/overlays/cilium     (FQDN egress, recommended)
+#   kubectl apply -k deploy/overlays/calico     (CIDR egress)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nanoclaw
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: nanoclaw-warden-cinder
+      app.kubernetes.io/part-of: nanoclaw-warden-cinder
+    includeSelectors: false
+
+configurations:
+  - kustomizeconfig.yaml
+
+resources:
+  - namespace.yaml
+  - serviceaccounts.yaml
+  - quota.yaml
+  - redis/redis.yaml
+  - vault.yaml
+  - controller.yaml
+  - agent-scaledjob.yaml
+  - scaling.yaml
+  - networkpolicies.yaml
+  - admission-policy.yaml
+
+configMapGenerator:
+  - name: nanoclaw-config
+    envs:
+      - nanoclaw.env
+  - name: redis-config
+    files:
+      - redis/redis.conf
+      - redis/bootstrap.sh
+  - name: nanoclaw-admission
+    envs:
+      - admission.env
+    options:
+      # The admission policy binding references this name directly.
+      disableNameSuffixHash: true
+
+generatorOptions:
+  disableNameSuffixHash: false
+
+images:
+  - name: nanoclaw-runtime
+    newName: ghcr.io/djkidnyce/nanoclaw-warden-cinder/runtime
+    newTag: "0.2.0"
+  - name: redis
+    newName: docker.io/library/redis
+    newTag: "8.12.0-alpine"

@@ -1,0 +1,35 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: nanoclaw-pod-creator-lock
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "has(params.data.podCreators) && request.userInfo.username in params.data.podCreators.split(',')"
+      messageExpression: "'pods in this namespace may only be created by the Job and ReplicaSet controllers, not ' + request.userInfo.username"
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: nanoclaw-pod-creator-lock
+spec:
+  policyName: nanoclaw-pod-creator-lock
+  validationActions: [Deny, Audit]
+  paramRef:
+    name: nanoclaw-admission
+    namespace: nanoclaw
+    parameterNotFoundAction: Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: nanoclaw

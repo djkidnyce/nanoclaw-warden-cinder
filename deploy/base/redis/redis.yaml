@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: redis
+    spec:
+      serviceAccountName: nanoclaw-redis
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10999
+        runAsGroup: 10999
+        fsGroup: 10999
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Native sidecar: creates the consumer groups KEDA reads, every time the pod starts.
+        - name: bootstrap
+          image: redis
+          restartPolicy: Always
+          command: ["sh", "/etc/redis/conf/bootstrap.sh"]
+          readinessProbe:
+            exec:
+              command: ["test", "-f", "/tmp/ready"]
+            periodSeconds: 5
+          securityContext: &hardened
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 50m, memory: 32Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/redis/conf, readOnly: true}
+            - {name: bootstrap-password, mountPath: /var/run/nanoclaw/redis, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      containers:
+        - name: redis
+          image: redis
+          command: ["redis-server", "/etc/redis/conf/redis.conf"]
+          ports:
+            - {name: redis, containerPort: 6379}
+          readinessProbe:
+            tcpSocket: {port: redis}
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: {port: redis}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          securityContext: *hardened
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/redis/conf, readOnly: true}
+            - {name: acl, mountPath: /etc/redis/acl, readOnly: true}
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: config
+          configMap:
+            name: redis-config
+        - name: acl
+          secret:
+            secretName: nanoclaw-redis-acl
+            defaultMode: 0440
+        - name: bootstrap-password
+          secret:
+            secretName: nanoclaw-redis-bootstrap
+            defaultMode: 0440
+            items: [{key: password, path: password}]
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    app.kubernetes.io/component: redis
+spec:
+  selector:
+    app.kubernetes.io/component: redis
+  ports:
+    - {name: redis, port: 6379, targetPort: redis}

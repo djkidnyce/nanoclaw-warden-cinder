@@ -1,0 +1,12 @@
+# Teach kustomize where KEDA custom resources reference ConfigMaps, so generated
+# names (with their content hash) are rewritten inside the ScaledJob pod template too.
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - kind: ScaledJob
+        group: keda.sh
+        path: spec/jobTargetRef/template/spec/containers/envFrom/configMapRef/name
+      - kind: ScaledJob
+        group: keda.sh
+        path: spec/jobTargetRef/template/spec/volumes/configMap/name

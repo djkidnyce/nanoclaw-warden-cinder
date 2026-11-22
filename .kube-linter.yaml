@@ -1,30 +1,33 @@
-# kube-linter config for NanoClaw Warden Cinder.
-# Enforces the workload-hardening rules the threat model depends on. A failure here
-# is a security regression, not a style nit.
-#
-# Run locally with:  kube-linter lint k8s --config .kube-linter.yaml
-
+# Run against rendered overlays: kustomize build deploy/overlays/cilium | kube-linter lint -
 checks:
-  # Start from no defaults, then turn on exactly the checks we care about, so the
-  # signal is the security posture and not unrelated best-practice noise.
-  doNotAutoAddDefaults: true
-  include:
-    # --- least privilege / isolation (the core of the threat model) ---
-    - "run-as-non-root"                 # every container runs as non-root
-    - "no-read-only-root-fs"            # read-only root filesystem required
-    - "privilege-escalation-container"  # allowPrivilegeEscalation must be false
-    - "privileged-container"            # no privileged containers
-    - "drop-net-raw-capability"         # capabilities dropped
-    - "unset-cpu-requirements"          # resource requests/limits set (runaway control)
-    - "unset-memory-requirements"
-    # --- supply chain / config hygiene ---
-    - "latest-tag"                      # no :latest images; pin by digest/tag
-    - "default-service-account"         # do not silently use the default SA
-    - "use-namespace"                   # resources are namespaced
-
-customChecks: []
-
-# The credentials Secret ships as a documented placeholder, and the Vault sidecar
-# legitimately consumes it via secretKeyRef. kube-linter does not flag that pattern,
-# so no exclusion is needed. If a future check flags the placeholder value, exclude
-# it here by name rather than weakening the check globally.
+  addAllBuiltIn: true
+  exclude:
+    # KEDA owns replica counts, so a single replica Redis and zero to N workloads are intended.
+    - minimum-three-replicas
+    - no-anti-affinity
+    # Redis is a single instance coordination bus; see docs/HOW_IT_WORKS.md for the HA option.
+    - no-rolling-update-strategy
+    # Secrets are mounted as files on purpose. These checks flag env style usage we do not have.
+    - read-secret-from-env-var
+    # Probes on the controller are exec based and agents are run to completion Jobs.
+    - no-readiness-probe
+    - no-liveness-probe
+    # Rules for features this project does not use.
+    - dnsconfig-options
+    - required-annotation-email
+    - required-label-owner
+    - use-namespace
+    - pdb-min-available
+    - pdb-max-unavailable
+    - pdb-unhealthy-pod-eviction-policy
+    - priority-class-name
+    - restart-policy
+    - job-ttl-seconds-after-finished
+    - sorted-keys
+    # Agent pods come from the KEDA ScaledJob custom resource, which kube-linter cannot read,
+    # so it reports the agent policies as dangling. tests/policy/test_network_reachability.py
+    # proves those policies select the agent pods.
+    - dangling-networkpolicy
+    - dangling-networkpolicypeer-podselector
+    # Node placement is environment specific. Add affinity in your own overlay.
+    - no-node-affinity

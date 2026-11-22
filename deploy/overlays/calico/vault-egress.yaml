@@ -1,0 +1,18 @@
+# Inbound address ranges Anthropic publishes for its API (docs: /en/api/ip-addresses).
+# Recheck that page when you upgrade, and replace these if UPSTREAM_URL points elsewhere.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vault-egress-upstream
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: vault
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: {cidr: 160.79.104.0/23}
+        - ipBlock: {cidr: 153.61.224.0/22}
+        - ipBlock: {cidr: "2607:6bc0::/48"}
+      ports:
+        - {protocol: TCP, port: 443}

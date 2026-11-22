@@ -1,166 +1,106 @@
 # NanoClaw Warden Cinder
 
-Ephemeral, isolated AI agents on Kubernetes. They spark when needed and burn out clean.
+Ephemeral, isolated AI agents on Kubernetes. They spark when there's work and burn out clean when there isn't.
 
-![status](https://img.shields.io/badge/status-reference_implementation-blue)
 ![ci](https://github.com/djkidnyce/nanoclaw-warden-cinder/actions/workflows/ci.yml/badge.svg)
-![k8s](https://img.shields.io/badge/kubernetes-1.28%2B-326ce5)
-![keda](https://img.shields.io/badge/KEDA-chart_2.20.1-00b3e6)
-![cni](https://img.shields.io/badge/CNI-Cilium_1.19.5_%7C_Calico_3.32.0-f8c517)
+![k8s](https://img.shields.io/badge/kubernetes-1.32%2B-326ce5)
+![keda](https://img.shields.io/badge/KEDA-2.21.1-00b3e6)
+![cni](https://img.shields.io/badge/CNI-Cilium_1.20.5_%7C_Calico_3.33.1-f8c517)
 ![license](https://img.shields.io/badge/license-Apache_2.0-green)
 
-> Versions pinned and verified current as of **2026-06-22**.
+Versions pinned and verified against upstream releases on 2026-11-22. The full list lives in [`versions.env`](versions.env).
 
 ## What it does
 
-NanoClaw Warden Cinder runs AI agent workloads as disposable Kubernetes Jobs. A long-lived
-controller reads a task queue, decomposes work into subtasks, and spawns one sub-agent per
-task. Each sub-agent lives in its own Pod, does one job, and terminates. When no work is
-queued, KEDA scales the whole agent layer to zero, so idle cost is nothing. A new task wakes
-exactly the agents needed.
+You put a task on a queue. A controller splits it into subtasks. KEDA starts one Kubernetes Job per subtask, each running a single agent in its own locked down pod. Agents call the model through a vault gateway that holds the only API key and is the only thing allowed out of the cluster. Results come back, proposed actions wait for a human, and then everything scales back to zero. Redis is the only pod that stays up.
 
-The design treats every agent interaction as hostile until proven otherwise. The component
-that *decides* what to do (the controller) is separated from the components that *can act*
-(the sub-agents), and even those hold no credentials. A vault sidecar injects API keys at
-request time, enforces per-agent rate limits, and screens tool metadata at the protocol
-boundary. Default-deny networking stops agents from reaching each other or the open internet.
-Sub-agents run with powerless service accounts, so a fully compromised agent holds no cluster
-credential to abuse. High-impact actions are returned for human approval rather than
-auto-executed.
+![Deployment overview](docs/infographic.svg)
 
-The result is an agent swarm that scales horizontally, isolates blast radius at the OS level,
-and leaves no persistent state for one task to poison the next. It ships with a verified
-threat model and a red-team self-assessment matrix mapped to the OWASP LLM Top 10. Built on
-the NanoClaw isolation model.
+| | Idle | Busy |
+|---|---|---|
+| Redis | 1 pod | 1 pod |
+| Controller | 0 | 1 |
+| Agents | 0 | 1 per waiting subtask, up to 20 |
+| Vault | 0 | 1 per 8 agents, up to 3 |
 
-## The name
+## Why it's built this way
 
-Three ideas in one. **NanoClaw** is the lineage: minimal, auditable, isolation-first agent
-design. **Warden** is the controller stance: it watches over a set of isolated cells where
-agents work under least privilege. **Cinder** is the lifecycle: agents are sparks that flare
-on demand and burn out clean, leaving no embers (no persistent state).
+Prompt injection is the top risk on the OWASP list for LLM apps, and nobody has a reliable fix. So this design doesn't depend on the model behaving. If an agent is fully hijacked:
 
-## Architecture at a glance
+- it has no Kubernetes API token and no role, so it can't touch the cluster
+- it has no API key, only a token good for one subtask and 20 calls
+- it can reach Redis and the vault, nothing else. Not the internet, not its peers
+- it can't run anything. Tool use turns into a proposal that a person approves
+- its pod is gone when the subtask ends, so nothing poisoned carries over
 
-```
- inbound task (Redis stream)
-        |
-        v
- +--------------+   creates Jobs via K8s API (not docker.sock)
- |  Controller  | ---------------+
- | (decides)    |                |
- +--------------+                v
-   scales 0->1            +----------------+ +----------------+
-                          | Sub-agent Pod  | | Sub-agent Pod  |  ephemeral Jobs
-                          | +----+ +-----+ | | +----+ +-----+ |  restricted PSS
-                          | |agt | |vault| | | |agt | |vault| |  scoped SA, no token
-                          | +----+ +-----+ | | +----+ +-----+ |  default-deny netpol
-                          +----------------+ +----------------+
-                               scale 0->N via KEDA, back to 0 when idle
-```
+Admission policies inside the API server back all of that up. Only KEDA can create Jobs in the namespace, only approved images run, and no pod gets a service account token or a debug container.
 
-Full diagram: [`docs/infographic.html`](docs/infographic.html) (open in a browser) and
-[`docs/infographic.svg`](docs/infographic.svg). Security analysis in
-[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md); self-assessment in
-[`docs/REDTEAM_MATRIX.md`](docs/REDTEAM_MATRIX.md).
-
-## Quickstart
+## Quick start
 
 ```bash
-# 1. Check dependencies (no changes made)
-./scripts/preflight.sh
-
-# 2. Install only what's missing (prompts first). Cilium is default.
-./scripts/install.sh --cni=cilium      # or --cni=calico
-
-# 3. Re-check
-./scripts/preflight.sh
-
-# 4. Set the API key (use External Secrets Operator in prod)
-kubectl create namespace nanoclaw
-kubectl -n nanoclaw create secret generic nanoclaw-credentials \
-  --from-literal=anthropic-api-key=YOUR_KEY
-
-# 5. Deploy (after replacing image digests and the egress CIDR placeholder)
-kubectl apply -f k8s/
-
-# 6. Watch scale-to-zero in action
-kubectl get pods -n nanoclaw -w
-kubectl -n nanoclaw exec deploy/redis -- redis-cli XADD nanoclaw:tasks '*' \
-  data '{"id":"t1","payload":{"goal":"demo"},"subtasks":[{"goal":"a"},{"goal":"b"}]}'
+./scripts/preflight.sh                                   # read only check
+./scripts/install.sh                                     # KEDA if missing (asks first)
+kubectl apply -f deploy/base/namespace.yaml
+./scripts/gen-secrets.sh --api-key-file ~/.secrets/anthropic.key
+kubectl apply -k deploy/overlays/cilium                  # or deploy/overlays/calico
 ```
 
-## Dependencies
+Then send it work:
 
-| Component | Pinned version | Role | Notes |
-|---|---|---|---|
-| Kubernetes | 1.28+ | Platform | Tested floor |
-| KEDA | chart 2.20.1 (app 2.19.0 GA) | Scale-to-zero | `ScaledJob` on Redis stream |
-| Cilium | 1.19.5 | CNI + NetworkPolicy | eBPF, default option |
-| Calico | 3.32.0 (tigera-operator) | CNI + NetworkPolicy | Alternative / Flannel add-on |
-| Redis | 7-alpine | Task queue + scale signal | Coordination only, not agent memory |
-
-**Load-bearing requirement:** the CNI must enforce `NetworkPolicy`. Bare Flannel does not.
-`preflight.sh` flags this. The network isolation is what blocks the indirect-injection
-exfiltration chain, so it is not optional.
-
-## Security model in one paragraph
-
-Controller has the only RBAC that can create Jobs and cannot execute tools or read secrets.
-Sub-agents get a powerless ServiceAccount with no mounted token, so a jailbroken agent holds
-no cluster credential. Credentials live only in a per-Pod Vault sidecar that injects keys at
-call time, rate-limits per agent, and screens MCP tool metadata at the protocol boundary.
-Default-deny NetworkPolicies stop peer-to-peer and open-internet egress. High-impact actions
-(send, delete, transfer, modify ACL) are returned as proposed for human approval, never
-auto-executed. Pods are ephemeral, so no poisoned state survives a task.
-
-## Continuous integration
-
-`.github/workflows/ci.yml` runs on every push and PR, no cluster required, so fork PRs
-work without secrets. Four gates:
-
-1. `lint` — shell syntax + shellcheck, Python compile, YAML parse.
-2. `manifests` — `kubectl apply --dry-run=client` renders every manifest.
-3. `security` — kube-linter enforces the workload-hardening rules the threat model depends
-   on (non-root, read-only rootfs, no privilege escalation, dropped capabilities, no
-   `:latest`, no default ServiceAccount). A regression fails the build.
-4. `pins` — confirms the documented dependency versions stay consistent across the scripts
-   and the README, so a pin can't drift silently.
-
-The security gate's checks live in `.kube-linter.yaml`.
-
-## Repository layout
-
-```
-nanoclaw-warden-cinder/
-|-- README.md
-|-- LICENSE
-|-- .gitignore
-|-- .kube-linter.yaml         # security gate checks
-|-- .github/workflows/ci.yml  # CI: lint, dry-run, kube-linter, pins
-|-- scripts/
-|   |-- preflight.sh          # check-only dependency report
-|   `-- install.sh            # install missing deps, prompts first
-|-- k8s/                      # manifests, applied in numeric order
-|-- orchestrator/controller.py
-|-- agent/agent.py
-`-- docs/
-    |-- ARCHITECTURE.md
-    |-- THREAT_MODEL.md
-    |-- REDTEAM_MATRIX.md
-    |-- DEPLOY.md
-    |-- DOCUMENTATION.md
-    |-- infographic.html
-    `-- infographic.svg
+```bash
+kubectl -n nanoclaw port-forward svc/redis 6379:6379 &
+export PYTHONPATH=src REDIS_HOST=127.0.0.1 REDIS_USERNAME=client REDIS_PASSWORD_FILE=./nanoclaw-client.pass
+python3 -m nanoclaw cli submit --goal "Review the incident" --subtask "Timeline" --subtask "Root causes" --wait 600
 ```
 
-## Disclaimer
+The full walk through, including a laptop option on kind, is in [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
-Reference implementation. Container images, the Vault internals, results aggregation, and
-supply-chain signing are stubs or out of scope and noted where they belong. Review
-`docs/DEPLOY.md`'s production checklist before any real deployment. Do not commit a real API
-key; the secret in `k8s/06-redis-and-secrets.yaml` ships as a placeholder.
+## Requirements
+
+| Component | Version | Why |
+|---|---|---|
+| Kubernetes | 1.32 or newer | ValidatingAdmissionPolicy v1 and native sidecars |
+| KEDA | 2.21.1 (2.21.0 minimum) | Redis Streams `lagCount` scaling to zero. 2.21.0 fixes CVE-2026-77524 |
+| Cilium | 1.20.5 | recommended. Hostname based egress for the vault |
+| Calico | 3.33.1 | alternative. Address range egress for the vault |
+| Redis | 8.12.0 | ships in the manifests. Lag needs 7.0 or newer, the ACLs need 7.2 or newer |
+
+The CNI has to enforce NetworkPolicy. Flannel on its own doesn't, and `preflight.sh` will tell you.
+
+## Docs
+
+| Doc | Read it for |
+|---|---|
+| [QUICKSTART](docs/QUICKSTART.md) | getting it running |
+| [HOW_IT_WORKS](docs/HOW_IT_WORKS.md) | the full design: data flow, scaling, every security layer, failure handling |
+| [CONFIGURATION](docs/CONFIGURATION.md) | every setting, secrets, gVisor, digest pinning, durable Redis |
+| [THREAT_MODEL](docs/THREAT_MODEL.md) | what it defends against and what it doesn't |
+| [REDTEAM_MATRIX](docs/REDTEAM_MATRIX.md) | technique by technique self assessment, with the test that covers each row |
+| [CONTROLS](docs/CONTROLS.md) | NIST SP 800-53 Rev 5 mapping |
+| [TESTING](docs/TESTING.md) | the regression suite and the latest results |
+| [CHANGELOG](CHANGELOG.md) | what changed in 0.2.0 |
+
+## Testing
+
+```bash
+./scripts/fetch-tools.sh && . .tools/env.sh
+./scripts/test-all.sh
+```
+
+That runs shellcheck, yamllint, kubeconform, kube-linter, checkov and 223 pytest cases: unit tests, integration tests on a real Redis with the production ACLs, a network reachability proof, script tests, admission tests on a real Kubernetes API server, and a scale from zero to N and back emulation with real agent processes. CI adds a full kind cluster run with Cilium and KEDA. Details in [docs/TESTING.md](docs/TESTING.md).
+
+## Layout
+
+```
+deploy/base/            namespace, workloads, KEDA scaling, network and admission policy
+deploy/overlays/        cilium, calico, e2e-kind
+deploy/components/      gvisor, digest-pinning
+src/nanoclaw/           controller, agent, vault, cli
+scripts/                preflight, install, gen-secrets, pin-digests, fetch-tools, test-all
+tests/                  unit, integration, policy, scripts, apiserver, e2e
+versions.env            every pinned version
+```
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](LICENSE).

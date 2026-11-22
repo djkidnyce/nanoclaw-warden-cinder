@@ -1,0 +1,15 @@
+# Calico open source has no hostname based egress, so the vault is limited to the
+# published upstream address ranges on 443. Also fits any CNI that enforces standard
+# NetworkPolicy (kindnet in recent kind releases, for example).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nanoclaw
+
+resources:
+  - ../../base
+  - vault-egress.yaml
+
+# components:
+#   - ../../components/gvisor
+#   - ../../components/digest-pinning
+#   - ../../components/pod-creator-lock

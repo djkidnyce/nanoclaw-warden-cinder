@@ -1,0 +1,27 @@
+# The vault is the only pod that may leave the cluster, and only to this hostname.
+# If you change UPSTREAM_URL, change matchName to the same host.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: vault-egress-upstream
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: vault
+  egress:
+    # DNS through Cilium's proxy, so FQDN rules learn the answers.
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - {port: "53", protocol: ANY}
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toFQDNs:
+        - matchName: api.anthropic.com
+      toPorts:
+        - ports:
+            - {port: "443", protocol: TCP}

@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-upstream
+  labels:
+    app.kubernetes.io/component: mock-upstream
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: mock-upstream
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: mock-upstream
+    spec:
+      serviceAccountName: nanoclaw-vault
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mock
+          image: nanoclaw-runtime
+          args: ["mock-upstream"]
+          env:
+            - {name: PORT, value: "8080"}
+            - {name: MOCK_EXPECTED_KEY, value: test-upstream-key}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /, port: http}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-upstream
+spec:
+  selector:
+    app.kubernetes.io/component: mock-upstream
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mock-upstream-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: mock-upstream
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: vault
+      ports:
+        - {protocol: TCP, port: 8080}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vault-egress-mock
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: vault
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: mock-upstream
+      ports:
+        - {protocol: TCP, port: 8080}

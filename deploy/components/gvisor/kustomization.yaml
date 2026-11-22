@@ -1,0 +1,18 @@
+# Runs agent pods under gVisor, a user space kernel, so code an agent is tricked
+# into running cannot reach the host kernel directly. Requires runsc on the nodes
+# and a RuntimeClass named gvisor (created here; remove it if your platform ships one).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - runtimeclass.yaml
+
+patches:
+  - target:
+      group: keda.sh
+      kind: ScaledJob
+      name: nanoclaw-agent
+    patch: |-
+      - op: add
+        path: /spec/jobTargetRef/template/spec/runtimeClassName
+        value: gvisor

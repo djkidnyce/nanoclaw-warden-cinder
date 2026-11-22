@@ -1,15 +1,7 @@
 name: ci
 
-# Validates the project on every push and PR. Three gates:
-#   1. lint      — shell, Python, and YAML syntax; preflight/installer parse
-#   2. manifests — kubectl client-side dry-run renders every manifest
-#   3. security  — kube-linter enforces the workload-hardening rules the
-#                  threat model depends on (non-root, read-only fs, no extra caps,
-#                  no privilege escalation). A regression here fails the build.
-#
-# No cluster is required. Everything runs client-side / static, so PRs from forks
-# work without secrets. Versions of pinned deps are checked against the project's
-# documented pins so a silent drift is caught.
+# Every action is pinned to a full commit SHA. Renovate keeps the SHAs and the
+# versions in versions.env current. No secrets are used, so fork PRs run everything.
 
 on:
   push:
@@ -21,93 +13,99 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
-    name: lint (shell / python / yaml)
-    runs-on: ubuntu-latest
+  test:
+    name: tests and scanners
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Shell syntax + shellcheck
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y shellcheck >/dev/null
-          for f in scripts/*.sh; do
-            bash -n "$f"
-            shellcheck -S warning "$f" || true   # advisory, do not fail the build on style
-          done
-
-      - uses: actions/setup-python@v5
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
-          python-version: "3.12"
-
-      - name: Python syntax
-        run: |
-          python -m pip install --quiet pyyaml
-          python -m py_compile orchestrator/controller.py agent/agent.py
-
-      - name: YAML parses
-        run: |
-          python - <<'PY'
-          import glob, yaml, sys
-          bad = 0
-          for f in glob.glob("k8s/*.yaml") + glob.glob(".github/workflows/*.yml"):
-              try:
-                  list(yaml.safe_load_all(open(f)))
-                  print("ok  ", f)
-              except Exception as e:
-                  print("FAIL", f, e); bad += 1
-          sys.exit(1 if bad else 0)
-          PY
-
-  manifests:
-    name: manifests (kubectl dry-run)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Client-side dry-run of every manifest
-        run: |
-          fail=0
-          for f in k8s/*.yaml; do
-            echo "::group::$f"
-            # client dry-run validates structure/required fields without a cluster.
-            # KEDA ScaledJob is a CRD, so skip schema validation for it (no CRD present
-            # in CI) but still confirm it parses as valid YAML object(s).
-            if grep -q 'kind: ScaledJob' "$f"; then
-              kubectl apply --dry-run=client --validate=false -f "$f"
-            else
-              kubectl apply --dry-run=client -f "$f"
-            fi
-            echo "::endgroup::"
-          done
-          exit $fail
-
-  security:
-    name: security (kube-linter)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: kube-linter scan
-        uses: stackrox/kube-linter-action@v1
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          directory: k8s
-          config: .kube-linter.yaml
-
-  pins:
-    name: dependency pins (drift check)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Confirm documented pins are present
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Python dependencies
         run: |
-          # Fails if someone edits a pin in one place but not the docs.
-          # These are the versions verified current as of 2026-06-22.
-          grep -q 'KEDA_CHART_VERSION="2.20.1"' scripts/preflight.sh
-          grep -q 'CILIUM_VERSION="1.19.5"'      scripts/preflight.sh
-          grep -q 'CALICO_VERSION="v3.32.0"'     scripts/preflight.sh
-          grep -q 'chart 2.20.1' README.md
-          echo "pins consistent across scripts and README"
+          python -m pip install --require-hashes -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+      - name: Redis server matching production
+        run: |
+          . ./versions.env
+          id="$(docker create "redis:${REDIS_VERSION}")"
+          mkdir -p .tools/bin
+          docker cp "$id:/usr/local/bin/redis-server" .tools/bin/redis-server
+          docker cp "$id:/usr/local/bin/redis-cli" .tools/bin/redis-cli
+          docker rm "$id"
+          echo "REDIS_SERVER=$PWD/.tools/bin/redis-server" >> "$GITHUB_ENV"
+          .tools/bin/redis-server --version
+      - name: Pinned toolchain
+        run: |
+          ./scripts/fetch-tools.sh
+          grep -v '^export PATH=' .tools/env.sh | sed 's/^export //; s/"//g' >> "$GITHUB_ENV"
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+          echo "$PWD/.tools/envtest" >> "$GITHUB_PATH"
+      - name: Full regression suite
+        run: ./scripts/test-all.sh
+      - name: Scale timeline
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-timeline
+          path: .pytest_cache/e2e-timeline.json
+          if-no-files-found: ignore
+
+  image:
+    name: build runtime image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: nanoclaw-runtime:ci
+      - name: Image runs as non root and refuses unknown roles
+        run: |
+          [ "$(docker image inspect nanoclaw-runtime:ci -f '{{.Config.User}}')" = "65532:65532" ]
+          rc=0; docker run --rm --read-only nanoclaw-runtime:ci nope || rc=$?
+          [ "$rc" = 64 ]
+
+  e2e-kind:
+    name: end to end on kind (Cilium, KEDA, scale 0 to N to 0)
+    needs: [test, image]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+      - uses: azure/setup-kubectl@bda439f5f36b99b262ebdcd3613869bddb064c8e # v5.2.0
+      - name: kind
+        run: |
+          ./scripts/fetch-tools.sh
+          echo "$PWD/.tools/bin" >> "$GITHUB_PATH"
+      - name: Run
+        run: ./tests/e2e/kind_e2e.sh

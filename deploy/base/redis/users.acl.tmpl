@@ -1,0 +1,7 @@
+user default off resetkeys -@all
+user bootstrap on #{{BOOTSTRAP_HASH}} resetkeys resetchannels -@all +ping +hello +auth +client|setinfo +client|setname ~nanoclaw:* +xgroup|create +exists
+user controller on #{{CONTROLLER_HASH}} resetkeys resetchannels -@all +ping +hello +auth +client|setinfo +client|setname ~nanoclaw:* +xreadgroup +xack +xadd +xautoclaim +xpending +xinfo|groups +xtrim +xgroup|create +hset +hsetnx +hget +hgetall +hincrby +expire +del +exists +multi +exec +discard
+user agent on #{{AGENT_HASH}} resetkeys resetchannels -@all +ping +hello +auth +client|setinfo +client|setname ~nanoclaw:subtasks +xreadgroup +xack +multi +exec +discard (%W~nanoclaw:results +xadd)
+user vault on #{{VAULT_HASH}} resetkeys resetchannels -@all +ping +hello +auth +client|setinfo +client|setname %R~nanoclaw:tok:* +hgetall (~nanoclaw:rl:* ~nanoclaw:calls:* +incr +incrby +expire)
+user keda on #{{KEDA_HASH}} resetkeys resetchannels -@all +ping +hello +auth +client|setinfo +client|setname +select %R~nanoclaw:* +xinfo|groups +xinfo|stream +xlen +xpending
+user client on #{{CLIENT_HASH}} resetkeys resetchannels -@all +ping +hello +auth +client|setinfo +client|setname %W~nanoclaw:tasks +xadd (%R~nanoclaw:job:* +hgetall +hget +exists) (%R~nanoclaw:completed %R~nanoclaw:approvals %R~nanoclaw:dlq +xrange +xrevrange)

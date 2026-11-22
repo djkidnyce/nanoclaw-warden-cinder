@@ -1,0 +1,33 @@
+# CI only. Cilium overlay plus a mock upstream, so the end to end test proves
+# scale from zero and back without a real API key. Never deploy this anywhere real.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nanoclaw
+
+resources:
+  - ../cilium
+  - mock-upstream.yaml
+
+components:
+  - ../../components/pod-creator-lock
+
+images:
+  - name: ghcr.io/djkidnyce/nanoclaw-warden-cinder/runtime
+    newName: nanoclaw-runtime
+    newTag: e2e
+  - name: nanoclaw-runtime
+    newTag: e2e
+
+configMapGenerator:
+  - name: nanoclaw-config
+    behavior: merge
+    literals:
+      - UPSTREAM_URL=http://mock-upstream:8080
+      - ALLOWED_TOOLS=create_ticket
+      - VISIBILITY_TIMEOUT_SECONDS=120
+  - name: nanoclaw-admission
+    behavior: merge
+    literals:
+      - allowedImagePrefixes=nanoclaw-runtime,docker.io/library/redis
+    options:
+      disableNameSuffixHash: true

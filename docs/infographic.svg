@@ -1,92 +1,142 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="760" viewBox="0 0 680 760" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
-<title>NanoClaw Warden Cinder deployment overview</title>
-<desc>A controller deployment reads a Redis task queue and spawns ephemeral sub-agent Jobs via KEDA scale-to-zero. Each sub-agent runs in its own Pod with a powerless service account, a credential vault sidecar, default-deny networking, and restricted pod security. A legend lists pinned dependency versions.</desc>
-<style>
-  .t{font-size:14px;fill:#2C2C2A}
-  .ts{font-size:12px;fill:#5F5E5A}
-  .th{font-size:14px;font-weight:500;fill:#2C2C2A}
-  .arr{stroke:#5F5E5A;stroke-width:1.5;fill:none}
-</style>
-<defs>
-<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>
-<rect x="0" y="0" width="680" height="760" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="900" viewBox="0 0 800 900" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <title>NanoClaw Warden Cinder deployment overview</title>
+  <desc>Tasks land on Redis. KEDA reads stream lag and scales a controller from zero to one, agent Jobs from zero to twenty, and a vault gateway from zero to three. Agents reach only Redis and the vault. Only the vault reaches the upstream model API. Everything except Redis returns to zero when idle.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#5F5E5A"/>
+    </marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#185FA5"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#0F6E56"/>
+    </marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#854F0B"/>
+    </marker>
+  </defs>
+  <style>
+    .h1{font-size:22px;font-weight:600;fill:#1F1E1C}
+    .h2{font-size:14px;font-weight:600;fill:#2C2C2A}
+    .t{font-size:12.5px;fill:#3D3C39}
+    .s{font-size:11px;fill:#5F5E5A}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:11px;fill:#3D3C39}
+    .line{stroke:#5F5E5A;stroke-width:1.5;fill:none}
+  </style>
+  <rect width="800" height="900" fill="#FFFFFF"/>
 
-<text class="th" x="40" y="30" font-size="18">NanoClaw Warden Cinder</text>
-<text class="ts" x="40" y="48">Scalable isolated agents. Controller spawns ephemeral sub-agent Pods, scale to zero when idle.</text>
+  <text class="h1" x="40" y="44">NanoClaw Warden Cinder</text>
+  <text class="t" x="40" y="66">Agents spark when there is work and burn out clean. Idle footprint: one Redis pod.</text>
 
-<rect x="40" y="66" width="160" height="52" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text class="th" x="120" y="86" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Inbound task</text>
-<text class="ts" x="120" y="104" text-anchor="middle" dominant-baseline="central" fill="#444441">Redis stream</text>
-<line x1="200" y1="92" x2="252" y2="92" class="arr" marker-end="url(#arrow)"/>
+  <!-- Outside the namespace: client and KEDA -->
+  <rect x="40" y="96" width="170" height="64" rx="10" fill="#F1EFE8" stroke="#8A887F"/>
+  <text class="h2" x="56" y="122">Operator or app</text>
+  <text class="s" x="56" y="142">nanoclaw cli submit</text>
+  <text class="s" x="56" y="155">Redis user: client</text>
 
-<rect x="254" y="62" width="180" height="60" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text class="th" x="344" y="82" text-anchor="middle" dominant-baseline="central" fill="#0C447C">Controller</text>
-<text class="ts" x="344" y="100" text-anchor="middle" dominant-baseline="central" fill="#185FA5">Decides, never acts</text>
-<text class="ts" x="344" y="114" text-anchor="middle" dominant-baseline="central" fill="#185FA5">scales 0 to 1</text>
+  <rect x="590" y="96" width="170" height="64" rx="10" fill="#F1EFE8" stroke="#8A887F"/>
+  <text class="h2" x="606" y="122">KEDA 2.21.1</text>
+  <text class="s" x="606" y="142">reads lag every 5 s</text>
+  <text class="s" x="606" y="155">Redis user: keda, read only</text>
 
-<text class="ts" x="500" y="84" text-anchor="middle">KEDA</text>
-<text class="ts" x="500" y="100" text-anchor="middle">creates Jobs</text>
-<line x1="434" y1="92" x2="556" y2="92" class="arr" marker-end="url(#arrow)"/>
-<line x1="560" y1="100" x2="560" y2="150" class="arr" marker-end="url(#arrow)"/>
+  <!-- Namespace boundary -->
+  <rect x="24" y="190" width="752" height="470" rx="18" fill="none" stroke="#185FA5" stroke-width="1.2" stroke-dasharray="6 5"/>
+  <text class="h2" x="44" y="216" fill="#185FA5">namespace nanoclaw</text>
+  <text class="s" x="44" y="233">PSA restricted, default deny,</text>
+  <text class="s" x="44" y="247">admission policies, quota</text>
 
-<rect x="40" y="150" width="600" height="300" rx="20" fill="none" stroke="#185FA5" stroke-width="0.5" stroke-dasharray="5 4"/>
-<text class="th" x="60" y="176">Namespace: nanoclaw</text>
-<text class="ts" x="60" y="194">Restricted Pod Security Standard enforced. Default-deny NetworkPolicy.</text>
+  <!-- Redis -->
+  <rect x="250" y="250" width="300" height="118" rx="12" fill="#FBEAEA" stroke="#A32D2D"/>
+  <text class="h2" x="268" y="276">Redis 8.12.0</text>
+  <text class="s" x="452" y="276">always on</text>
+  <text class="mono" x="268" y="298">nanoclaw:tasks       controller group</text>
+  <text class="mono" x="268" y="315">nanoclaw:subtasks    agents group</text>
+  <text class="mono" x="268" y="332">nanoclaw:results     controller group</text>
+  <text class="mono" x="268" y="349">approvals  completed  dlq</text>
+  <text class="s" x="268" y="364">seven ACL users, default user off</text>
 
-<rect x="64" y="210" width="252" height="220" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
-<text class="th" x="190" y="232" text-anchor="middle" fill="#085041">Sub-agent Pod (Job)</text>
-<text class="ts" x="190" y="250" text-anchor="middle" fill="#0F6E56">Ephemeral, one task then exit</text>
-<rect x="84" y="266" width="100" height="56" rx="8" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.5"/>
-<text class="th" x="134" y="288" text-anchor="middle" dominant-baseline="central" fill="#04342C">agent</text>
-<text class="ts" x="134" y="306" text-anchor="middle" dominant-baseline="central" fill="#085041">no API token</text>
-<rect x="196" y="266" width="100" height="56" rx="8" fill="#FAC775" stroke="#854F0B" stroke-width="0.5"/>
-<text class="th" x="246" y="288" text-anchor="middle" dominant-baseline="central" fill="#412402">vault</text>
-<text class="ts" x="246" y="306" text-anchor="middle" dominant-baseline="central" fill="#633806">holds keys</text>
-<line x1="184" y1="294" x2="194" y2="294" class="arr" marker-end="url(#arrow)"/>
-<text class="ts" x="190" y="348" text-anchor="middle">Powerless ServiceAccount</text>
-<text class="ts" x="190" y="366" text-anchor="middle">Credentials injected at call time</text>
-<text class="ts" x="190" y="384" text-anchor="middle">Egress only via vault</text>
-<text class="ts" x="190" y="402" text-anchor="middle">No peer network path</text>
+  <!-- Controller -->
+  <rect x="50" y="410" width="200" height="104" rx="12" fill="#E6F1FB" stroke="#185FA5"/>
+  <text class="h2" x="66" y="436">Controller</text>
+  <text class="s" x="176" y="436">0 to 1</text>
+  <text class="t" x="66" y="458">splits tasks, collects</text>
+  <text class="t" x="66" y="475">results, sweeps stuck work</text>
+  <text class="s" x="66" y="497">no API token, no model key</text>
 
-<rect x="364" y="210" width="252" height="220" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
-<text class="th" x="490" y="232" text-anchor="middle" fill="#085041">Sub-agent Pod (Job)</text>
-<text class="ts" x="490" y="250" text-anchor="middle" fill="#0F6E56">Scales 0 to N, then back to 0</text>
-<rect x="384" y="266" width="100" height="56" rx="8" fill="#9FE1CB" stroke="#0F6E56" stroke-width="0.5"/>
-<text class="th" x="434" y="288" text-anchor="middle" dominant-baseline="central" fill="#04342C">agent</text>
-<text class="ts" x="434" y="306" text-anchor="middle" dominant-baseline="central" fill="#085041">no API token</text>
-<rect x="496" y="266" width="100" height="56" rx="8" fill="#FAC775" stroke="#854F0B" stroke-width="0.5"/>
-<text class="th" x="546" y="288" text-anchor="middle" dominant-baseline="central" fill="#412402">vault</text>
-<text class="ts" x="546" y="306" text-anchor="middle" dominant-baseline="central" fill="#633806">holds keys</text>
-<line x1="484" y1="294" x2="494" y2="294" class="arr" marker-end="url(#arrow)"/>
-<text class="ts" x="490" y="348" text-anchor="middle">Same isolation per Pod</text>
-<text class="ts" x="490" y="366" text-anchor="middle">No shared mounts</text>
-<text class="ts" x="490" y="384" text-anchor="middle">No surviving state</text>
-<text class="ts" x="490" y="402" text-anchor="middle">Controller is sole router</text>
+  <!-- Agents -->
+  <rect x="300" y="410" width="200" height="104" rx="12" fill="#E1F5EE" stroke="#0F6E56"/>
+  <rect x="308" y="418" width="200" height="104" rx="12" fill="none" stroke="#0F6E56" stroke-opacity="0.35"/>
+  <text class="h2" x="316" y="436">Agent Jobs</text>
+  <text class="s" x="440" y="436">0 to 20</text>
+  <text class="t" x="316" y="458">one pod, one subtask,</text>
+  <text class="t" x="316" y="475">then exit</text>
+  <text class="s" x="316" y="497">token for one subtask only</text>
 
-<text class="th" x="40" y="486">Trust boundary</text>
-<rect x="40" y="500" width="600" height="44" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text class="ts" x="56" y="522" dominant-baseline="central">Controller: only identity that can create Jobs, cannot read secrets or run tools.</text>
-<text class="ts" x="56" y="536" dominant-baseline="central">High-impact actions (send, delete, transfer, modify ACL) returned as proposed for human approval.</text>
+  <!-- Vault -->
+  <rect x="550" y="410" width="200" height="104" rx="12" fill="#FDF0DC" stroke="#854F0B"/>
+  <text class="h2" x="566" y="436">Vault gateway</text>
+  <text class="s" x="682" y="436">0 to 3</text>
+  <text class="t" x="566" y="458">holds the only API key</text>
+  <text class="t" x="566" y="475">checks token, model, tools</text>
+  <text class="s" x="566" y="497">only pod with egress</text>
 
-<text class="th" x="40" y="580">Dependencies, pinned and current as of 2026-06-22</text>
-<rect x="40" y="594" width="190" height="48" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text class="th" x="56" y="614" dominant-baseline="central">KEDA</text>
-<text class="ts" x="56" y="630" dominant-baseline="central">chart 2.20.1, app 2.19.0</text>
-<rect x="245" y="594" width="190" height="48" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text class="th" x="261" y="614" dominant-baseline="central">Cilium</text>
-<text class="ts" x="261" y="630" dominant-baseline="central">1.19.5, enforces netpol</text>
-<rect x="450" y="594" width="190" height="48" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text class="th" x="466" y="614" dominant-baseline="central">Calico</text>
-<text class="ts" x="466" y="630" dominant-baseline="central">3.32.0, alt CNI</text>
+  <!-- Upstream -->
+  <rect x="550" y="700" width="200" height="56" rx="10" fill="#F1EFE8" stroke="#8A887F"/>
+  <text class="h2" x="566" y="724">Model API</text>
+  <text class="s" x="566" y="742">api.anthropic.com : 443</text>
 
-<text class="th" x="40" y="672">Legend</text>
-<rect x="40" y="684" width="16" height="16" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text class="ts" x="64" y="692" dominant-baseline="central">Control plane (decides)</text>
-<rect x="240" y="684" width="16" height="16" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
-<text class="ts" x="264" y="692" dominant-baseline="central">Sub-agent (acts, isolated)</text>
-<rect x="450" y="684" width="16" height="16" rx="4" fill="#FAC775" stroke="#854F0B" stroke-width="0.5"/>
-<text class="ts" x="474" y="692" dominant-baseline="central">Credential boundary</text>
-<rect x="40" y="712" width="16" height="16" rx="4" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
-<text class="ts" x="64" y="720" dominant-baseline="central">Infrastructure / dependency</text>
+  <!-- Blocked internet -->
+  <rect x="300" y="700" width="200" height="56" rx="10" fill="#FFFFFF" stroke="#A32D2D" stroke-dasharray="4 4"/>
+  <text class="h2" x="316" y="724" fill="#A32D2D">Internet, peers</text>
+  <text class="s" x="316" y="742">no route from agents</text>
+
+  <!-- Arrows -->
+  <path class="line" d="M210 128 H300 V246" marker-end="url(#a)"/>
+  <text class="s" x="218" y="120">1  add task</text>
+
+  <path d="M250 300 H150 V406" stroke="#185FA5" stroke-width="1.5" fill="none" marker-end="url(#ab)"/>
+  <text class="s" x="40" y="340" fill="#185FA5">2  read tasks</text>
+  <text class="s" x="40" y="354" fill="#185FA5">and results</text>
+  <path d="M200 406 V330 H246" stroke="#185FA5" stroke-width="1.5" fill="none" marker-end="url(#ab)"/>
+  <text class="s" x="206" y="388" fill="#185FA5">3  add ids</text>
+
+  <path class="line" d="M675 160 V200 H500 V246" marker-end="url(#a)"/>
+  <text class="s" x="683" y="180">lag</text>
+  <path class="line" d="M765 160 V540 H470 V528" marker-end="url(#a)" stroke-dasharray="5 4"/>
+  <text class="s" x="412" y="556">4  KEDA starts Jobs,</text>
+  <text class="s" x="412" y="570">wakes vault, controller</text>
+
+  <path d="M380 406 V372" stroke="#0F6E56" stroke-width="1.5" fill="none" marker-end="url(#ag)"/>
+  <path d="M420 372 V406" stroke="#0F6E56" stroke-width="1.5" fill="none" marker-end="url(#ag)"/>
+  <text class="s" x="318" y="392" fill="#0F6E56">5  claim</text>
+  <text class="s" x="426" y="392" fill="#0F6E56">7  result</text>
+
+  <path d="M508 462 H546" stroke="#0F6E56" stroke-width="1.5" fill="none" marker-end="url(#ag)"/>
+  <text class="s" x="512" y="452" fill="#0F6E56">6 call</text>
+
+  <path d="M650 514 V696" stroke="#854F0B" stroke-width="1.5" fill="none" marker-end="url(#aa)"/>
+  <text class="s" x="658" y="610" fill="#854F0B">TLS, real key</text>
+
+  <path d="M400 522 V696" stroke="#A32D2D" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+  <circle cx="400" cy="610" r="11" fill="#FFFFFF" stroke="#A32D2D" stroke-width="1.5"/>
+  <path d="M394 604 L406 616 M406 604 L394 616" stroke="#A32D2D" stroke-width="2"/>
+
+  <!-- Allowed flows -->
+  <text class="h2" x="40" y="560">Allowed flows, nothing else</text>
+  <text class="mono" x="40" y="580">controller  to redis:6379</text>
+  <text class="mono" x="40" y="596">agent       to redis:6379, vault:8200</text>
+  <text class="mono" x="40" y="612">vault       to redis:6379, upstream:443</text>
+  <text class="mono" x="40" y="628">keda ns     to redis:6379</text>
+  <text class="mono" x="40" y="644">all pods    to cluster DNS</text>
+
+  <!-- Idle vs busy -->
+  <text class="h2" x="40" y="796">Scale profile</text>
+  <rect x="40" y="808" width="340" height="62" rx="8" fill="#F7F6F2" stroke="#D8D6CE"/>
+  <text class="t" x="56" y="832">Idle: Redis 1, controller 0, vault 0, agents 0</text>
+  <text class="t" x="56" y="854">Busy: controller 1, agents up to 20, vault up to 3</text>
+
+  <text class="h2" x="410" y="796">Pinned 2026-11-22</text>
+  <rect x="410" y="808" width="350" height="62" rx="8" fill="#F7F6F2" stroke="#D8D6CE"/>
+  <text class="t" x="426" y="832">KEDA 2.21.1   Cilium 1.20.5   Calico 3.33.1</text>
+  <text class="t" x="426" y="854">Redis 8.12.0   Python 3.13.18   Kubernetes 1.32+</text>
 </svg>

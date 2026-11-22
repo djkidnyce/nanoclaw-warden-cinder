@@ -1,0 +1,15 @@
+# Recommended. Cilium enforces DNS aware egress: the vault can reach the upstream
+# API hostname on 443 and nothing else on the internet.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nanoclaw
+
+resources:
+  - ../../base
+  - vault-egress.yaml
+
+# Optional hardening. Uncomment after the prerequisites in docs/CONFIGURATION.md are met.
+# components:
+#   - ../../components/gvisor
+#   - ../../components/digest-pinning
+#   - ../../components/pod-creator-lock
