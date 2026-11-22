@@ -1,0 +1,67 @@
+# =============================================================================
+# Zero-trust networking. Default deny everything, then allow only what's wired.
+# This is what blocks the OWASP indirect-injection exfiltration example: a
+# sub-agent tricked into fetching an attacker image URL has no egress path to it.
+# Requires a CNI that enforces NetworkPolicy (Calico, Cilium). Flannel alone does
+# NOT enforce these — if you're on Flannel, add Calico for policy or swap to Cilium.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: nanoclaw
+spec:
+  podSelector: {}            # all pods in namespace
+  policyTypes: [Ingress, Egress]
+  # empty ingress + egress = deny all in both directions
+---
+# Sub-agents: deny peer-to-peer, allow DNS, allow egress ONLY to the Vault sidecar's
+# upstream (handled inside the pod via localhost — see deployment). External API access
+# is brokered by the Vault, so the agent container itself needs no broad egress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-egress
+  namespace: nanoclaw
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: sub-agent
+  policyTypes: [Egress, Ingress]
+  ingress: []                # no one talks TO a sub-agent. Controller reads status via API, not network.
+  egress:
+    # DNS only
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # NOTE: the agent reaches its model/tools via the Vault sidecar over localhost
+    # (same Pod, no NetworkPolicy needed). The Vault's own egress is allowed below.
+---
+# The Vault sidecar is the single controlled egress point. It (and only it) may reach
+# the allowlisted external endpoints. Lock this to your real API hosts.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vault-egress
+  namespace: nanoclaw
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: sub-agent   # vault runs in the agent pod as sidecar
+  policyTypes: [Egress]
+  egress:
+    - to:
+        # Replace with the specific CIDRs / FQDN-policy for api.anthropic.com and any
+        # tool endpoints. Egress allowlisting is the difference between "tool access"
+        # and "open internet." Do not leave this as 0.0.0.0/0.
+        - ipBlock:
+            cidr: 0.0.0.0/0          # <-- TODO: REPLACE. Placeholder only.
+      ports:
+        - protocol: TCP
+          port: 443

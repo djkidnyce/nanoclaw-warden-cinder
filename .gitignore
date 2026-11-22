@@ -1,0 +1,31 @@
+# Secrets — never commit real credentials
+*.secret.yaml
+*-credentials.yaml
+.env
+.env.*
+secrets/
+*.key
+*.pem
+kubeconfig
+*.kubeconfig
+
+# Local build / runtime
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+node_modules/
+dist/
+build/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
+
+# Logs and tmp
+*.log
+tmp/

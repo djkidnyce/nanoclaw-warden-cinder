@@ -1,0 +1,46 @@
+# =============================================================================
+# Controller RBAC — the crown jewel.
+# This ServiceAccount is the ONLY identity in the namespace that can create Jobs.
+# Every verb here is deliberate. Do not add "*". Do not grant secrets read beyond
+# what the controller needs to template the Vault reference (it never reads secret
+# VALUES — secretKeyRef injection happens at the kubelet, not in controller code).
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nanoclaw-controller
+  namespace: nanoclaw
+automountServiceAccountToken: true   # controller needs the API; sub-agents will NOT (see agent SA)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nanoclaw-controller
+  namespace: nanoclaw
+rules:
+  # Create and observe sub-agent Jobs. No delete-collection, no cluster scope.
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch"]
+  # Read Pod status to report sub-agent progress. No exec, no pods/attach, no port-forward.
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  # Read its own config. Explicitly NOT secrets.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nanoclaw-controller
+  namespace: nanoclaw
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nanoclaw-controller
+subjects:
+  - kind: ServiceAccount
+    name: nanoclaw-controller
+    namespace: nanoclaw

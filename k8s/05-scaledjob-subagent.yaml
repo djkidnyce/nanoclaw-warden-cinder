@@ -1,0 +1,103 @@
+# =============================================================================
+# Scale-to-zero for sub-agents, via KEDA ScaledJob.
+# No messages on the stream -> zero Pods -> zero cost. A new subtask message wakes
+# exactly the Jobs needed. Each Job is one disposable sub-agent (NanoClaw model:
+# ephemeral, no persistent state). When the task finishes, the Pod is GC'd.
+#
+# The controller can ALSO enqueue directly and create Jobs via the API for finer
+# control; the ScaledJob path is the autoscaling backbone. Pick one as primary to
+# avoid double-spawning — recommended: controller writes subtasks to the stream,
+# KEDA owns Job creation. Then the controller only WATCHES, never creates. If you
+# go that route, drop "jobs: create" from the controller Role.
+# =============================================================================
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: nanoclaw-subagent
+  namespace: nanoclaw
+spec:
+  jobTargetRef:
+    parallelism: 10              # max concurrent sub-agents per scale event
+    completions: 1
+    backoffLimit: 2
+    activeDeadlineSeconds: 900   # hard kill a stuck agent after 15 min
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: nanoclaw
+          app.kubernetes.io/component: sub-agent
+      spec:
+        serviceAccountName: nanoclaw-agent
+        automountServiceAccountToken: false
+        restartPolicy: Never
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65532
+          seccompProfile:
+            type: RuntimeDefault
+        containers:
+          # ---- The agent container: runs the task, holds NO raw credentials ----
+          - name: agent
+            image: your-registry/nanoclaw-agent:1.0.0@sha256:REPLACE_WITH_DIGEST
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            env:
+              - name: REDIS_ADDR
+                value: "redis.nanoclaw.svc.cluster.local:6379"
+              - name: TASK_STREAM
+                value: "nanoclaw:tasks"
+              # Talks to its model/tools via the Vault on localhost. No API key here.
+              - name: VAULT_ENDPOINT
+                value: "http://127.0.0.1:8200"
+            resources:
+              requests: { cpu: "250m", memory: "256Mi" }
+              limits: { cpu: "1", memory: "1Gi" }
+            volumeMounts:
+              - name: tmp
+                mountPath: /tmp
+              - name: workspace
+                mountPath: /workspace
+          # ---- The Vault sidecar: the ONLY holder of credentials ----
+          # Injects API keys at request time, enforces per-agent rate limits and
+          # tool allowlists, and screens MCP tool metadata at the protocol boundary
+          # before it ever reaches the agent. This is the NanoClaw "Agent Vault".
+          - name: vault
+            image: your-registry/nanoclaw-vault:1.0.0@sha256:REPLACE_WITH_DIGEST
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            env:
+              - name: ANTHROPIC_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: nanoclaw-credentials   # injected by kubelet, never seen by controller
+                    key: anthropic-api-key
+              - name: RATE_LIMIT_RPM
+                value: "60"
+            ports:
+              - containerPort: 8200
+            resources:
+              requests: { cpu: "50m", memory: "64Mi" }
+              limits: { cpu: "200m", memory: "128Mi" }
+        volumes:
+          - name: tmp
+            emptyDir: {}
+          - name: workspace
+            emptyDir: {}        # ephemeral. Nothing persists past the task. No shared mount.
+  pollingInterval: 5            # check the stream every 5s
+  maxReplicaCount: 50           # cluster-wide cap on concurrent sub-agents
+  minReplicaCount: 0            # TRUE scale to zero
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  triggers:
+    - type: redis-streams
+      metadata:
+        address: "redis.nanoclaw.svc.cluster.local:6379"
+        stream: "nanoclaw:tasks"
+        consumerGroup: "subagents"
+        pendingEntriesCount: "1"   # one pending message is enough to wake a Job

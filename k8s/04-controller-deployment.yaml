@@ -1,0 +1,61 @@
+# =============================================================================
+# Controller Deployment. Long-lived, single replica (leader-elected if you scale).
+# It reads the task queue, decomposes work, and creates Jobs. It does NOT execute
+# tool calls itself — that authority lives only in sub-agents, each scoped tighter.
+# Separating "decides what to do" from "can actually do it" is the core safety split.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanoclaw-controller
+  namespace: nanoclaw
+  labels:
+    app.kubernetes.io/name: nanoclaw
+    app.kubernetes.io/component: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nanoclaw
+        app.kubernetes.io/component: controller
+    spec:
+      serviceAccountName: nanoclaw-controller
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: controller
+          image: your-registry/nanoclaw-controller:1.0.0@sha256:REPLACE_WITH_DIGEST
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: REDIS_ADDR
+              value: "redis.nanoclaw.svc.cluster.local:6379"
+            - name: TASK_STREAM
+              value: "nanoclaw:tasks"
+            - name: AGENT_IMAGE
+              value: "your-registry/nanoclaw-agent:1.0.0@sha256:REPLACE_WITH_DIGEST"
+            - name: AGENT_NAMESPACE
+              value: "nanoclaw"
+            # Anthropic key is NOT here. The controller never holds it. Only the
+            # Vault sidecar in each agent Pod gets it, via secretKeyRef.
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
