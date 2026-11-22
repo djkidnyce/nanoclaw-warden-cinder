@@ -1,0 +1,30 @@
+# kube-linter config for NanoClaw Warden Cinder.
+# Enforces the workload-hardening rules the threat model depends on. A failure here
+# is a security regression, not a style nit.
+#
+# Run locally with:  kube-linter lint k8s --config .kube-linter.yaml
+
+checks:
+  # Start from no defaults, then turn on exactly the checks we care about, so the
+  # signal is the security posture and not unrelated best-practice noise.
+  doNotAutoAddDefaults: true
+  include:
+    # --- least privilege / isolation (the core of the threat model) ---
+    - "run-as-non-root"                 # every container runs as non-root
+    - "no-read-only-root-fs"            # read-only root filesystem required
+    - "privilege-escalation-container"  # allowPrivilegeEscalation must be false
+    - "privileged-container"            # no privileged containers
+    - "drop-net-raw-capability"         # capabilities dropped
+    - "unset-cpu-requirements"          # resource requests/limits set (runaway control)
+    - "unset-memory-requirements"
+    # --- supply chain / config hygiene ---
+    - "latest-tag"                      # no :latest images; pin by digest/tag
+    - "default-service-account"         # do not silently use the default SA
+    - "use-namespace"                   # resources are namespaced
+
+customChecks: []
+
+# The credentials Secret ships as a documented placeholder, and the Vault sidecar
+# legitimately consumes it via secretKeyRef. kube-linter does not flag that pattern,
+# so no exclusion is needed. If a future check flags the placeholder value, exclude
+# it here by name rather than weakening the check globally.

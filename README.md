@@ -3,6 +3,7 @@
 Ephemeral, isolated AI agents on Kubernetes. They spark when needed and burn out clean.
 
 ![status](https://img.shields.io/badge/status-reference_implementation-blue)
+![ci](https://github.com/djkidnyce/nanoclaw-warden-cinder/actions/workflows/ci.yml/badge.svg)
 ![k8s](https://img.shields.io/badge/kubernetes-1.28%2B-326ce5)
 ![keda](https://img.shields.io/badge/KEDA-chart_2.20.1-00b3e6)
 ![cni](https://img.shields.io/badge/CNI-Cilium_1.19.5_%7C_Calico_3.32.0-f8c517)
@@ -113,12 +114,30 @@ Default-deny NetworkPolicies stop peer-to-peer and open-internet egress. High-im
 (send, delete, transfer, modify ACL) are returned as proposed for human approval, never
 auto-executed. Pods are ephemeral, so no poisoned state survives a task.
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and PR, no cluster required, so fork PRs
+work without secrets. Four gates:
+
+1. `lint` — shell syntax + shellcheck, Python compile, YAML parse.
+2. `manifests` — `kubectl apply --dry-run=client` renders every manifest.
+3. `security` — kube-linter enforces the workload-hardening rules the threat model depends
+   on (non-root, read-only rootfs, no privilege escalation, dropped capabilities, no
+   `:latest`, no default ServiceAccount). A regression fails the build.
+4. `pins` — confirms the documented dependency versions stay consistent across the scripts
+   and the README, so a pin can't drift silently.
+
+The security gate's checks live in `.kube-linter.yaml`.
+
 ## Repository layout
 
 ```
 nanoclaw-warden-cinder/
 |-- README.md
 |-- LICENSE
+|-- .gitignore
+|-- .kube-linter.yaml         # security gate checks
+|-- .github/workflows/ci.yml  # CI: lint, dry-run, kube-linter, pins
 |-- scripts/
 |   |-- preflight.sh          # check-only dependency report
 |   `-- install.sh            # install missing deps, prompts first
