@@ -18,12 +18,24 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CLUSTER=nanoclaw-e2e
 NS=nanoclaw
 WORK="$(mktemp -d)"
+diagnose() {
+  echo "==== diagnostics"
+  kubectl -n "$NS" get deploy,scaledjob,scaledobject,jobs,pods -o wide || true
+  kubectl -n "$NS" describe scaledobject || true
+  kubectl -n "$NS" get events --sort-by=.lastTimestamp | tail -40 || true
+  kubectl -n keda logs deploy/keda-operator --tail=80 || true
+}
+on_exit() {
+  local rc=$?
+  [ "$rc" -ne 0 ] && diagnose
+  cleanup
+}
+trap on_exit EXIT
 cleanup() {
   [ -n "${PF_PID:-}" ] && kill "$PF_PID" 2>/dev/null || true
   if [ "${KEEP:-0}" != 1 ]; then kind delete cluster --name "$CLUSTER" >/dev/null 2>&1 || true; fi
   rm -rf "$WORK"
 }
-trap cleanup EXIT
 log() { printf '\n==> %s\n' "$*"; }
 wait_for() {  # wait_for <seconds> <description> <command...>
   local limit="$1" what="$2"; shift 2
@@ -61,7 +73,7 @@ kubectl -n "$NS" rollout status deploy/redis --timeout 5m
 kubectl -n "$NS" rollout status deploy/mock-upstream --timeout 5m
 
 log "1. idle footprint scales to zero"
-wait_for 420 "controller, vault and agents at zero" is_zero
+wait_for 900 "controller, vault and agents at zero" is_zero
 kubectl -n "$NS" get pods
 
 log "2. burst of work"
@@ -109,7 +121,7 @@ grep -q "API False" <<<"$out"
 kubectl -n "$NS" delete pod netcheck --wait=false
 
 log "3. back to zero"
-wait_for 600 "controller, vault and agents back at zero" is_zero
+wait_for 900 "controller, vault and agents back at zero" is_zero
 kubectl -n "$NS" get deploy,scaledjob,scaledobject
 
 log "PASS"

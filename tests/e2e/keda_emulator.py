@@ -69,6 +69,9 @@ class Emulator:
     # Metrics, exactly as KEDA reads them
 
     def lag(self, stream, group) -> int:
+        # KEDA's lagCount mode checks the version with INFO before reading lag.
+        if int(str(self.keda.info("server")["redis_version"]).split(".")[0]) < 7:
+            raise RuntimeError("redis 7+ required for lag")
         for g in self.keda.xinfo_groups(stream):
             if g["name"] == group:
                 return int(g["lag"] or 0)

@@ -38,7 +38,7 @@ Redis has seven users and the default user is off. Each user can run only the co
 | `controller` | read and ack tasks and results, write subtasks, manage records and tokens, trim streams |
 | `agent` | claim and ack subtasks, append to the results stream. Cannot read records, results, tokens, job state or any stream entry it did not claim |
 | `vault` | read tokens, count rate and budget. Cannot read task content |
-| `keda` | read stream metadata only (`XINFO`, `XLEN`, `XPENDING`). Cannot read entries |
+| `keda` | read stream metadata only (`XINFO`, `XLEN`, `XPENDING`) plus `INFO`, which KEDA's `lagCount` mode uses to confirm Redis 7 or newer. Cannot read entries |
 | `client` | append tasks, read job status, completions, approvals and the dead letter queue |
 
 The ACL file holds SHA256 hashes, never plaintext passwords. `scripts/gen-secrets.sh` creates it.

@@ -317,6 +317,29 @@ class TestAcl:
         self.denied(lambda: v.xrange(c.STREAM_SUBTASKS))
         self.denied(lambda: v.xadd(c.STREAM_RESULTS, {"data": "{}"}))
 
+    def test_keda_scaler_command_sequence_is_allowed(self, redis_server, fresh, ctl):
+        """Regression: the first kind run never scaled because KEDA's lagCount mode calls
+        INFO (to check for Redis 7+) and the keda user was not allowed to.
+
+        Replays what KEDA 2.21.1 sends (go-redis v9.23 handshake, then
+        pkg/scalers/redis_streams_scaler.go): HELLO 3 with AUTH, CLIENT SETINFO, PING,
+        INFO, XINFO GROUPS, and XLEN as the fallback."""
+        import redis as redis_lib
+        from tests.conftest import PASSWORDS
+        k = redis_lib.Redis(host="127.0.0.1", port=redis_server["port"], username="keda",
+                            password=PASSWORDS["keda"], protocol=3, decode_responses=True)
+        assert k.ping()
+        info = k.info()
+        assert int(str(info["redis_version"]).split(".")[0]) >= 7
+        submit(fresh, {"id": "kd", "goal": "g", "subtasks": ["a", "b"]})
+        drain_controller(ctl)
+        for stream, group in c.CONSUMER_GROUPS:
+            groups = k.xinfo_groups(stream)
+            assert group in [g["name"] for g in groups]
+        assert {g["name"]: g["lag"] for g in k.xinfo_groups(c.STREAM_SUBTASKS)}[c.GROUP_AGENTS] == 2
+        assert k.xlen(c.STREAM_SUBTASKS) == 2
+        assert k.xpending(c.STREAM_SUBTASKS, c.GROUP_AGENTS)["pending"] == 0
+
     def test_keda_is_read_only_metrics(self, fresh):
         k = fresh["keda"]
         assert k.xlen(c.STREAM_SUBTASKS) == 0

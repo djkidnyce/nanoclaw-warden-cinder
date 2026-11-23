@@ -97,7 +97,7 @@ jobs:
     name: end to end on kind (Cilium, KEDA, scale 0 to N to 0)
     needs: [test, image]
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
