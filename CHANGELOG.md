@@ -6,6 +6,7 @@
 - CI could not install its tools: checkov 3.4.6 pins `packaging<24` and pytest 9.2.0 needs `packaging>=24`. checkov now lives in its own virtualenv built by `scripts/fetch-tools.sh`.
 - Redis pinned to 8.12.0, which has a git tag but no official Docker image yet, so Redis would never have started. Pinned to 8.10.3, the newest published release. CI now checks that every pinned image exists.
 - KEDA could never read lag, so nothing scaled: its `lagCount` mode calls `INFO` to confirm Redis 7 or newer, and the read only `keda` Redis user wasn't allowed to. The user now has `INFO`, and a test replays KEDA's exact command sequence. Found by the first kind run.
+- The kind test could never see a Deployment at zero: Kubernetes drops `.status.replicas` at zero, and the helper turned kubectl's empty output into an empty string instead of `0`. The helpers moved to `tests/e2e/lib.sh` and now have their own tests.
 
 A rebuild after a full review. The first version looked right on paper but would not have worked on a cluster, and one of its security claims was overstated.
 

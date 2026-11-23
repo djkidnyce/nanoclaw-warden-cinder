@@ -12,7 +12,7 @@ mkdir -p "$OUT"
 step() { printf '\n==== %s\n' "$*"; }
 
 step "shell lint"
-shellcheck -x -S style scripts/*.sh deploy/base/redis/bootstrap.sh tests/e2e/kind_e2e.sh
+shellcheck -x -S style scripts/*.sh deploy/base/redis/bootstrap.sh tests/e2e/kind_e2e.sh tests/e2e/lib.sh
 
 step "yaml lint"
 yamllint -d '{extends: relaxed, rules: {line-length: {max: 160}}}' deploy .github

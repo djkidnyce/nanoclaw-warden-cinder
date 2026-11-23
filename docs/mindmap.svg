@@ -52,7 +52,7 @@
 <path d="M793.5 562.6 C836.7 562.6 836.7 733.0 880.0 733.0" stroke="#6B3FA0" stroke-width="3" fill="none" opacity="0.85"/>
 <path d="M1030.0 733.0 C1070.0 733.0 1060 657.0 1100 657.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
 <rect x="1100" y="642.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
-<text x="1114" y="661.5" font-size="13" fill="#2C2C2A">224 tests, all green</text>
+<text x="1114" y="661.5" font-size="13" fill="#2C2C2A">234 tests, all green</text>
 <path d="M1030.0 733.0 C1070.0 733.0 1060 695.0 1100 695.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
 <rect x="1100" y="680.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
 <text x="1114" y="699.5" font-size="13" fill="#2C2C2A">Real Redis 8.10 and a Kubernetes 1.37 API server</text>

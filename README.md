@@ -148,7 +148,7 @@ The CNI has to enforce NetworkPolicy. Flannel on its own doesn't, and `preflight
 ./scripts/test-all.sh
 ```
 
-That runs shellcheck, yamllint, kubeconform, kube-linter, checkov and 224 pytest cases: unit tests, integration tests on a real Redis with the production ACLs, a network reachability proof, script tests, admission tests on a real Kubernetes API server, and a scale from zero to N and back emulation with real agent processes. CI adds a full kind cluster run with Cilium and KEDA. Details in [docs/TESTING.md](docs/TESTING.md).
+That runs shellcheck, yamllint, kubeconform, kube-linter, checkov and 234 pytest cases: unit tests, integration tests on a real Redis with the production ACLs, a network reachability proof, script tests, admission tests on a real Kubernetes API server, and a scale from zero to N and back emulation with real agent processes. CI adds a full kind cluster run with Cilium and KEDA. Details in [docs/TESTING.md](docs/TESTING.md).
 
 ## Layout
 

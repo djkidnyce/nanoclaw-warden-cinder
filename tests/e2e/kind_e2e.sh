@@ -37,18 +37,8 @@ cleanup() {
   rm -rf "$WORK"
 }
 log() { printf '\n==> %s\n' "$*"; }
-wait_for() {  # wait_for <seconds> <description> <command...>
-  local limit="$1" what="$2"; shift 2
-  local start=$SECONDS
-  until "$@"; do
-    if [ $((SECONDS - start)) -ge "$limit" ]; then echo "timed out waiting for: $what" >&2; return 1; fi
-    sleep 5
-  done
-  echo "ok: $what ($((SECONDS - start))s)"
-}
-replicas() { kubectl -n "$NS" get deploy "$1" -o jsonpath='{.status.replicas}' 2>/dev/null | sed 's/^$/0/'; }
-agents() { kubectl -n "$NS" get pods -l app.kubernetes.io/component=agent --field-selector=status.phase=Running -o name 2>/dev/null | wc -l | tr -d ' '; }
-is_zero() { [ "$(replicas controller)" = 0 ] && [ "$(replicas vault)" = 0 ] && [ "$(agents)" = 0 ]; }
+# shellcheck source=tests/e2e/lib.sh
+. "$ROOT/tests/e2e/lib.sh"
 
 log "cluster"
 kind create cluster --config "$ROOT/tests/e2e/kind-config.yaml" --wait 0s

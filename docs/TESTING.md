@@ -21,7 +21,7 @@ You need Python 3.13, `redis-server` 7.2 or newer on PATH (or `REDIS_SERVER` poi
 | Unit | pytest, 34 cases | task and result validation, prompt fencing, vault policy, tool screening |
 | Integration | pytest, 36 cases, real Redis 8.10 with the production ACLs and limits | stream flow, no controller loop, lag for KEDA, token isolation between agents, token revocation, retries, recovery, dead letters, trimming, Redis data loss, oversized writes, every ACL boundary |
 | Policy | pytest, 105 cases on rendered manifests | pod hardening, no API permissions, config references, image pins, KEDA trigger shape, a full network reachability matrix for both CNIs, version drift |
-| Scripts | pytest, 21 cases with fake kubectl and helm | every preflight and installer branch, secret generation, the rendered ACL loading in real Redis |
+| Scripts | pytest, 31 cases with fake kubectl and helm, including the e2e helpers | every preflight and installer branch, secret generation, the rendered ACL loading in real Redis |
 | API server | pytest, 24 cases on a real `kube-apiserver` and etcd | all objects accepted, KEDA CRD validation, Pod Security restricted, all three admission policies, fail closed, no API access for any workload |
 | Scale | pytest, 4 cases with real agent processes | zero to N to zero, a second wave, crash recovery, a cold vault |
 | Cluster | `tests/e2e/kind_e2e.sh`, CI only | kind with Cilium and KEDA and the pod creator lock: idle at zero, a 12 subtask burst, people locked out of pod creation, network isolation from an agent shaped pod, back to zero |
@@ -35,7 +35,7 @@ You need Python 3.13, `redis-server` 7.2 or newer on PATH (or `REDIS_SERVER` poi
 | kubeconform | 85 valid, 0 invalid. The 14 skipped are KEDA and Cilium custom resources, which the API server stage validates against their real CRDs |
 | kube-linter | no errors on cilium, calico and e2e-kind |
 | checkov | 274 passed, 0 failed on cilium and calico |
-| pytest | 224 passed in 88 seconds |
+| pytest | 234 passed in 97 seconds |
 
 The kind stage needs container registries and runs in GitHub Actions. It was not part of this local run.
 
@@ -54,6 +54,7 @@ These are the reason each test exists.
 9. Found in the security review: any agent could read every other subtask's vault token. Now locked by `test_agents_cannot_see_each_others_tokens`.
 10. Found in the security review: a single 512 MB write could exhaust Redis memory. Now locked by `test_huge_writes_are_refused_by_redis`.
 11. Found by the first kind run in CI: KEDA's `lagCount` mode calls `INFO`, which the `keda` Redis user couldn't run, so nothing ever scaled. Now locked by `test_keda_scaler_command_sequence_is_allowed`, which replays KEDA 2.21.1's exact commands.
+12. Found by the second kind run: the e2e script's zero check could never pass, because Kubernetes drops `.status.replicas` at zero and the helper turned kubectl's empty output into an empty string instead of `0`. The helpers now live in `tests/e2e/lib.sh`, covered by `tests/scripts/test_e2e_lib.py`.
 
 ## How the scale test models KEDA
 
