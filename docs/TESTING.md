@@ -19,7 +19,7 @@ You need Python 3.13, `redis-server` 7.2 or newer on PATH (or `REDIS_SERVER` poi
 | Workload policy | kube-linter, all built in checks | exclusions are listed with reasons in `.kube-linter.yaml` |
 | Security policy | checkov, offline | two accepted findings, listed with compensating controls in `.checkov.yaml` |
 | Unit | pytest, 34 cases | task and result validation, prompt fencing, vault policy, tool screening |
-| Integration | pytest, 35 cases, real Redis 8.12 with the production ACLs and limits | stream flow, no controller loop, lag for KEDA, token isolation between agents, token revocation, retries, recovery, dead letters, trimming, Redis data loss, oversized writes, every ACL boundary |
+| Integration | pytest, 35 cases, real Redis 8.10 with the production ACLs and limits | stream flow, no controller loop, lag for KEDA, token isolation between agents, token revocation, retries, recovery, dead letters, trimming, Redis data loss, oversized writes, every ACL boundary |
 | Policy | pytest, 105 cases on rendered manifests | pod hardening, no API permissions, config references, image pins, KEDA trigger shape, a full network reachability matrix for both CNIs, version drift |
 | Scripts | pytest, 21 cases with fake kubectl and helm | every preflight and installer branch, secret generation, the rendered ACL loading in real Redis |
 | API server | pytest, 24 cases on a real `kube-apiserver` and etcd | all objects accepted, KEDA CRD validation, Pod Security restricted, all three admission policies, fail closed, no API access for any workload |

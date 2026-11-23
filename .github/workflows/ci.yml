@@ -80,6 +80,13 @@ jobs:
           push: false
           load: true
           tags: nanoclaw-runtime:ci
+      - name: Every pinned image exists in its registry
+        run: |
+          . ./versions.env
+          # A tag that exists upstream in git can still be missing from Docker Hub.
+          for ref in "redis:${REDIS_VERSION}-alpine" "redis:${REDIS_VERSION}" "python:${PYTHON_VERSION}-slim"; do
+            docker manifest inspect "$ref" >/dev/null && echo "ok $ref" || { echo "missing image $ref"; exit 1; }
+          done
       - name: Image runs as non root and refuses unknown roles
         run: |
           [ "$(docker image inspect nanoclaw-runtime:ci -f '{{.Config.User}}')" = "65532:65532" ]

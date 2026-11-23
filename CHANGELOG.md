@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.2.0 (2026-11-22)
+## 0.2.0 (2026-11-23)
+
+### Fixed after the first CI run
+- CI could not install its tools: checkov 3.4.6 pins `packaging<24` and pytest 9.2.0 needs `packaging>=24`. checkov now lives in its own virtualenv built by `scripts/fetch-tools.sh`.
+- Redis pinned to 8.12.0, which has a git tag but no official Docker image yet, so Redis would never have started. Pinned to 8.10.3, the newest published release. CI now checks that every pinned image exists.
 
 A rebuild after a full review. The first version looked right on paper but would not have worked on a cluster, and one of its security claims was overstated.
 
@@ -32,7 +36,7 @@ A rebuild after a full review. The first version looked right on paper but would
 - Docs: how it works, quick start, configuration, NIST 800-53 mapping, test report.
 
 ### Changed
-- KEDA 2.21.1 (minimum 2.21.0 for CVE-2026-77524), Cilium 1.20.5, Calico 3.33.1, Redis 8.12.0, Python 3.13.18.
+- KEDA 2.21.1 (minimum 2.21.0 for CVE-2026-77524), Cilium 1.20.5, Calico 3.33.1, Redis 8.10.3, Python 3.13.18.
 - Every GitHub Action pinned to a commit SHA, harden-runner on every job, Renovate for updates, cosign signing on release.
 - Default model is set by config instead of code.
 - No workload has any Kubernetes API permission. The controller no longer needs one.

@@ -55,7 +55,7 @@
 <text x="1114" y="661.5" font-size="13" fill="#2C2C2A">223 tests, all green</text>
 <path d="M1030.0 733.0 C1070.0 733.0 1060 695.0 1100 695.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
 <rect x="1100" y="680.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
-<text x="1114" y="699.5" font-size="13" fill="#2C2C2A">Real Redis 8.12 and a Kubernetes 1.37 API server</text>
+<text x="1114" y="699.5" font-size="13" fill="#2C2C2A">Real Redis 8.10 and a Kubernetes 1.37 API server</text>
 <path d="M1030.0 733.0 C1070.0 733.0 1060 733.0 1100 733.0" stroke="#6B3FA0" stroke-width="1.4" fill="none" opacity="0.6"/>
 <rect x="1100" y="718.0" width="360" height="30" rx="8" fill="#F0E8FA" stroke="#6B3FA0" stroke-width="0.8"/>
 <text x="1114" y="737.5" font-size="13" fill="#2C2C2A">Scale emulation with real agent processes</text>
@@ -121,7 +121,7 @@
 <text x="54" y="699.5" font-size="13" fill="#2C2C2A">Cilium 1.20.5 or Calico 3.33.1</text>
 <path d="M470.0 714.0 C430.0 714.0 440 733.0 400 733.0" stroke="#5F5E5A" stroke-width="1.4" fill="none" opacity="0.6"/>
 <rect x="40" y="718.0" width="360" height="30" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
-<text x="54" y="737.5" font-size="13" fill="#2C2C2A">Redis 8.12.0, Python 3.13.18</text>
+<text x="54" y="737.5" font-size="13" fill="#2C2C2A">Redis 8.10.3, Python 3.13.18</text>
 <path d="M470.0 714.0 C430.0 714.0 440 771.0 400 771.0" stroke="#5F5E5A" stroke-width="1.4" fill="none" opacity="0.6"/>
 <rect x="40" y="756.0" width="360" height="30" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.8"/>
 <text x="54" y="775.5" font-size="13" fill="#2C2C2A">Kubernetes 1.32 or newer</text>

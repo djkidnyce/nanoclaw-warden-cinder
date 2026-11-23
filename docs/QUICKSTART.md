@@ -2,7 +2,7 @@
 
 About 15 minutes on a cluster you already have. If you just want to see it work, skip to "Try it on your laptop" at the bottom.
 
-Versions this guide installs: KEDA 2.21.1, Cilium 1.20.5 or Calico 3.33.1, Redis 8.12.0.
+Versions this guide installs: KEDA 2.21.1, Cilium 1.20.5 or Calico 3.33.1, Redis 8.10.3.
 
 ## What you need
 

@@ -51,4 +51,4 @@ images:
     newTag: "0.2.0"
   - name: redis
     newName: docker.io/library/redis
-    newTag: "8.12.0-alpine"
+    newTag: "8.10.3-alpine"

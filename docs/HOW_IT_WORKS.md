@@ -2,7 +2,7 @@
 
 This is the full write up. It covers what each piece does, how a task moves through the system, how scaling works from zero to N and back, how every layer of security fits together, and what happens when things break.
 
-Pinned versions as of 2026-11-22: KEDA 2.21.1, Cilium 1.20.5, Calico 3.33.1, Redis 8.12.0, Python 3.13.18, Kubernetes 1.32 or newer. All of them live in `versions.env`.
+Pinned versions as of 2026-11-22: KEDA 2.21.1, Cilium 1.20.5, Calico 3.33.1, Redis 8.10.3, Python 3.13.18, Kubernetes 1.32 or newer. All of them live in `versions.env`.
 
 ![Deployment overview](infographic.svg)
 
@@ -28,7 +28,7 @@ Every nanoclaw workload runs from one image (`ghcr.io/djkidnyce/nanoclaw-warden-
 
 ### Redis
 
-Redis is the queue and the scale signal. It runs with persistence on (`appendonly yes`) and `noeviction`, so queued work is never silently dropped. It also caps any single value at 1 MB and any client's query buffer at 4 MB. Redis 8.12 defaults to 512 MB and 1 GB, which would let one hijacked agent fill the 400 MB memory cap with a single write and stall every queue. A native sidecar called `bootstrap` creates the three consumer groups every time the pod starts. That matters because KEDA can only read lag from a group that exists.
+Redis is the queue and the scale signal. It runs with persistence on (`appendonly yes`) and `noeviction`, so queued work is never silently dropped. It also caps any single value at 1 MB and any client's query buffer at 4 MB. Redis 8.10 defaults to 512 MB and 1 GB, which would let one hijacked agent fill the 400 MB memory cap with a single write and stall every queue. A native sidecar called `bootstrap` creates the three consumer groups every time the pod starts. That matters because KEDA can only read lag from a group that exists.
 
 Redis has seven users and the default user is off. Each user can run only the commands it needs on only the keys it needs:
 

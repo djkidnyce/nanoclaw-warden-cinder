@@ -28,6 +28,13 @@ fi
 [ -s crds/cilium-cnp.yaml ] || get "https://raw.githubusercontent.com/cilium/cilium/v${CILIUM_VERSION}/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnetworkpolicies.yaml" crds/cilium-cnp.yaml
 rm -f ./*.tgz
 
+# checkov in its own virtualenv: its pins (packaging<24) clash with pytest 9.
+if [ ! -x "$DEST/checkov/bin/checkov" ]; then
+  python3 -m venv "$DEST/checkov"
+  "$DEST/checkov/bin/pip" install --quiet -r "$ROOT/requirements-scan.txt"
+fi
+ln -sf "$DEST/checkov/bin/checkov" "$BIN/checkov"
+
 cat > "$DEST/env.sh" <<EOF
 export PATH="$BIN:$DEST/envtest:\$PATH"
 export ENVTEST_DIR="$DEST/envtest"

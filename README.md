@@ -72,13 +72,13 @@ mindmap
       Survives Redis data loss
     Proof
       223 tests
-      Real Redis 8.12 and Kubernetes 1.37 API server
+      Real Redis 8.10 and Kubernetes 1.37 API server
       kind cluster run in CI
       kubeconform, kube-linter, checkov
     Stack
       KEDA 2.21.1
       Cilium 1.20.5 or Calico 3.33.1
-      Redis 8.12.0
+      Redis 8.10.3
       Kubernetes 1.32 or newer
 ```
 
@@ -124,7 +124,7 @@ The full walk through, including a laptop option on kind, is in [docs/QUICKSTART
 | KEDA | 2.21.1 (2.21.0 minimum) | Redis Streams `lagCount` scaling to zero. 2.21.0 fixes CVE-2026-77524 |
 | Cilium | 1.20.5 | recommended. Hostname based egress for the vault |
 | Calico | 3.33.1 | alternative. Address range egress for the vault |
-| Redis | 8.12.0 | ships in the manifests. Lag needs 7.0 or newer, the ACLs need 7.2 or newer |
+| Redis | 8.10.3 | ships in the manifests. Lag needs 7.0 or newer, the ACLs need 7.2 or newer |
 
 The CNI has to enforce NetworkPolicy. Flannel on its own doesn't, and `preflight.sh` will tell you.
 

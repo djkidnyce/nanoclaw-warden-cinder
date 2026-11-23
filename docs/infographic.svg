@@ -47,7 +47,7 @@
 
   <!-- Redis -->
   <rect x="250" y="250" width="300" height="118" rx="12" fill="#FBEAEA" stroke="#A32D2D"/>
-  <text class="h2" x="268" y="276">Redis 8.12.0</text>
+  <text class="h2" x="268" y="276">Redis 8.10.3</text>
   <text class="s" x="452" y="276">always on</text>
   <text class="mono" x="268" y="298">nanoclaw:tasks       controller group</text>
   <text class="mono" x="268" y="315">nanoclaw:subtasks    agents group</text>
@@ -138,5 +138,5 @@
   <text class="h2" x="410" y="796">Pinned 2026-11-22</text>
   <rect x="410" y="808" width="350" height="62" rx="8" fill="#F7F6F2" stroke="#D8D6CE"/>
   <text class="t" x="426" y="832">KEDA 2.21.1   Cilium 1.20.5   Calico 3.33.1</text>
-  <text class="t" x="426" y="854">Redis 8.12.0   Python 3.13.18   Kubernetes 1.32+</text>
+  <text class="t" x="426" y="854">Redis 8.10.3   Python 3.13.18   Kubernetes 1.32+</text>
 </svg>
