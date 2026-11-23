@@ -47,6 +47,8 @@ spec:
           runAsNonRoot: true
           runAsUser: 65532
           runAsGroup: 65532
+          # Secret files mount as root:<fsGroup> 0440. Without this the app user can't read its password.
+          fsGroup: 65532
           seccompProfile:
             type: RuntimeDefault
         containers:

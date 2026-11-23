@@ -75,6 +75,27 @@ def test_every_configmap_reference_resolves(docs):
                 assert vol["configMap"]["name"] in names, owner["metadata"]["name"]
 
 
+def test_non_root_pods_can_read_their_secrets(docs):
+    """Regression from the third kind run: secret files mount as root:<fsGroup> with the volume's mode.
+    With 0440 and no fsGroup the group is root, so the app user gets permission denied and crash loops.
+    Unit tests never mount secrets, so only the kind cluster caught it."""
+    checked = 0
+    for owner, spec in pod_specs(docs):
+        ctx = spec.get("securityContext", {})
+        for vol in spec.get("volumes", []):
+            if "secret" not in vol:
+                continue
+            mode = vol["secret"].get("defaultMode", 0o644)
+            if mode & 0o004:
+                continue
+            checked += 1
+            name = f'{owner["metadata"]["name"]}/{vol["name"]}'
+            assert mode & 0o040, f"{name}: group can't read"
+            assert ctx.get("fsGroup") is not None, f"{name}: mode {oct(mode)} but no fsGroup"
+            assert ctx["fsGroup"] == ctx.get("runAsGroup"), f"{name}: fsGroup must match runAsGroup"
+    assert checked >= 4
+
+
 def test_secrets_referenced_are_the_documented_set(docs):
     used = set()
     for _owner, spec in pod_specs(docs):

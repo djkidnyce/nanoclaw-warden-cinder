@@ -23,7 +23,15 @@ diagnose() {
   kubectl -n "$NS" get deploy,scaledjob,scaledobject,jobs,pods -o wide || true
   kubectl -n "$NS" describe scaledobject || true
   kubectl -n "$NS" get events --sort-by=.lastTimestamp | tail -40 || true
-  kubectl -n keda logs deploy/keda-operator --tail=80 || true
+  kubectl -n keda logs deploy/keda-operator --tail=40 || true
+  # Pod logs last, so they land in the tail of the CI output.
+  local pod
+  for pod in $(kubectl -n "$NS" get pods -o name 2>/dev/null); do
+    echo "==== logs $pod (previous)"
+    kubectl -n "$NS" logs "$pod" --all-containers --previous --tail=30 2>/dev/null || true
+    echo "==== logs $pod"
+    kubectl -n "$NS" logs "$pod" --all-containers --tail=30 2>/dev/null || true
+  done
 }
 on_exit() {
   local rc=$?
