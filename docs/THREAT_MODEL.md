@@ -85,7 +85,7 @@ Controls: `MAX_TOKENS_CAP`, call budgets and rate limits per token, `MAX_SUBTASK
 Tests: `test_clamps_max_tokens`, `test_body_size_limit`, `test_huge_writes_are_refused_by_redis`, the validation tests.
 
 ### 9. Supply chain
-Controls: SHA pinned GitHub Actions, hash locked Python dependencies, release images signed with cosign and shipped with SBOM and provenance, Renovate for updates, the digest pinning component for enforcement.
+Controls: SHA pinned GitHub Actions, hash locked Python dependencies, release images signed with cosign, attested by GitHub, and shipped with SBOM and provenance, Renovate for updates, the digest pinning component for enforcement.
 
 Tests: `test_every_action_is_pinned_to_a_commit`, `test_digest_pinning_component_enforces_digests`.
 

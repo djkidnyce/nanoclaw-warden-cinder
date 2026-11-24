@@ -27,7 +27,7 @@ How the design lines up with the controls an assessor will ask about. This maps 
 | SI-3, SI-4 | Malicious code protection, monitoring | Tool metadata screening, denial logs, Hubble flow logs with Cilium | `vault.py`, `HOW_IT_WORKS.md` |
 | SI-7 | Software and information integrity | Hash locked Python dependencies, SHA pinned Actions, signed images with SBOM and provenance | `requirements.txt`, `release.yml` |
 | SI-10 | Information input validation | Strict task and result schemas, size limits, fence handling | `common.py`, unit tests |
-| SR-3, SR-11 | Supply chain controls, component authenticity | cosign signing, digest pinning, Renovate minimum release age | `release.yml`, `renovate.json` |
+| SR-3, SR-11 | Supply chain controls, component authenticity | cosign signing, GitHub build attestation, digest pinning, Renovate minimum release age | `release.yml`, `renovate.json` |
 
 ## DISA Kubernetes STIG alignment
 

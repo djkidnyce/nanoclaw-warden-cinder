@@ -143,6 +143,18 @@ KEEP=1 ./tests/e2e/kind_e2e.sh
 
 That builds a two node kind cluster with Cilium and KEDA, builds the image, deploys the `e2e-kind` overlay with a mock model API, runs a 12 subtask burst, checks that an agent shaped pod can reach Redis but not the internet, and waits for everything to return to zero. `KEEP=1` leaves the cluster up so you can poke at it. Delete it with `kind delete cluster --name nanoclaw-e2e`.
 
+## Check the release image
+
+Every release is built, signed and attested by GitHub Actions. You can check that the image came from this repo's release workflow with just the GitHub CLI:
+
+```bash
+gh attestation verify oci://ghcr.io/djkidnyce/nanoclaw-warden-cinder/runtime:v0.2.0 \
+  --repo djkidnyce/nanoclaw-warden-cinder \
+  --signer-workflow djkidnyce/nanoclaw-warden-cinder/.github/workflows/release.yml
+```
+
+It prints `Verification succeeded!` and the workflow run that built it. If you already use cosign, the keyless signature checks out too.
+
 ## Next
 
 Read [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for the full design, and [CONFIGURATION.md](CONFIGURATION.md) before you change limits or turn on gVisor and digest pinning.

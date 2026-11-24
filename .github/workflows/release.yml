@@ -1,8 +1,9 @@
 name: release
 
 # On a version tag: build the runtime image, push it to GHCR, sign it keylessly with
-# cosign (GitHub OIDC), and attach an SBOM and provenance. Then pin the digest with
-# scripts/pin-digests.sh and turn on components/digest-pinning.
+# cosign (GitHub OIDC), and attach an SBOM and provenance. Also publish a GitHub build
+# attestation, so anyone can check the image with `gh attestation verify` and no cosign.
+# Then pin the digest with scripts/pin-digests.sh and turn on components/digest-pinning.
 
 on:
   push:
@@ -19,6 +20,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
+      attestations: write
     steps:
       - uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
@@ -48,3 +50,9 @@ jobs:
           provenance: mode=max
       - name: Sign
         run: cosign sign --yes "${IMAGE}@${{ steps.build.outputs.digest }}"
+      - name: GitHub build attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
